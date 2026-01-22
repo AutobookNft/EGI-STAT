@@ -260,6 +260,14 @@ class GitHubMultiRepoClient:
                 additions = 0
                 deletions = 0
             
+            # Files
+            files_list = []
+            try:
+                # Accessing .files might be safe now if .stats triggered the fetch
+                files_list = [f.filename for f in gh_commit.files]
+            except Exception:
+                pass
+
             return CommitData(
                 sha=gh_commit.sha,
                 message=gh_commit.commit.message,
@@ -270,7 +278,7 @@ class GitHubMultiRepoClient:
                 additions=additions,
                 deletions=deletions,
                 total_changes=additions + deletions,
-                files_changed=[]  # Still skip files to save some API calls
+                files_changed=files_list
             )
         except Exception as e:
             print(f"⚠️  Error parsing commit {gh_commit.sha[:7]}: {e}")

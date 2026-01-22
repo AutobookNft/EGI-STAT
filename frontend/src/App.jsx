@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminChart from './components/AdminChart';
+import DailyStats from './components/DailyStats';
 import { LayoutDashboard, RefreshCcw, Calendar, GitCommit } from 'lucide-react';
 import './item.css';
 
@@ -63,6 +64,10 @@ function App() {
       </header>
 
       <main className="main-content">
+        {/* Daily Stats Overview (New) */}
+        <DailyStats active={true} />
+
+        <div className="section-divider" style={{ margin: '40px 0', borderBottom: '1px solid #333' }}></div>
         {/* Time Range Filter */}
         <div className="filter-bar">
           <button

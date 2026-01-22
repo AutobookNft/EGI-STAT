@@ -66,7 +66,7 @@ def get_db_connection():
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
     )
 
-def ingest_data(days_back=30):
+def ingest_data(days_back=30, target_repo=None):
     if not GITHUB_TOKEN:
         print("❌ GITHUB_TOKEN missing in .env")
         return
@@ -75,14 +75,21 @@ def ingest_data(days_back=30):
     
     # 1. Setup Client
     # Valid list from config - ALL 6 REPOSITORIES
-    repo_list = [
+    all_repos = [
         "AutobookNft/EGI", 
         "AutobookNft/EGI-HUB", 
         "AutobookNft/EGI-HUB-HOME-REACT",
         "AutobookNft/EGI-INFO",
         "AutobookNft/EGI-STAT",
         "AutobookNft/NATAN_LOC"
-    ] 
+    ]
+    
+    if target_repo:
+        if target_repo not in all_repos:
+            print(f"⚠️ Warning: {target_repo} not in standard list, but proceeding...")
+        repo_list = [target_repo]
+    else:
+        repo_list = all_repos 
     
     # Process one repo at a time to show progress
     for repo_name in repo_list:
@@ -197,7 +204,7 @@ def ingest_data(days_back=30):
                 tag_percentages = {tag: (count / total_commits) * 100 for tag, count in tag_counts.items()}
                 
                 # Classify
-                day_type, day_icon, type_multiplier = classify_day_type(tag_percentages)
+                day_type, day_type_icon, type_multiplier = classify_day_type(tag_percentages)
                 
                 # Calculate Scores
                 cognitive_load = calculate_cognitive_load(total_commits, files_touched_count, lines_touched)
@@ -283,6 +290,7 @@ def ingest_data(days_back=30):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ingest Commit Data to Remote DB')
     parser.add_argument('--days', type=int, default=30, help='Days back to scan (default: 30)')
+    parser.add_argument('--repo', type=str, help='Specific repo to ingest (optional)')
     args = parser.parse_args()
     
-    ingest_data(days_back=args.days)
+    ingest_data(days_back=args.days, target_repo=args.repo)
