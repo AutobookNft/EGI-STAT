@@ -68,6 +68,12 @@ def init_db():
                 lines_deleted INT DEFAULT 0,
                 net_lines INT DEFAULT 0,
                 productivity_score FLOAT DEFAULT 0,
+                files_touched INT DEFAULT 0,
+                day_type VARCHAR(50),
+                day_type_icon VARCHAR(10),
+                cognitive_load FLOAT DEFAULT 0,
+                coding_hours FLOAT DEFAULT 0,
+                testing_hours FLOAT DEFAULT 0,
                 tags_breakdown JSONB DEFAULT '{{}}'::jsonb,
                 UNIQUE(date, repo_name)
             )
