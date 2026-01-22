@@ -18,6 +18,7 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_DATABASE")
 DB_USER = os.getenv("DB_USERNAME")
 DB_PASS = os.getenv("DB_PASSWORD")
+
 DB_SCHEMA = os.getenv("DB_SCHEMA", "stat")
 
 def get_db_connection():
@@ -178,4 +179,4 @@ def get_raw_commits():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=5000)
+    app.run(host='0.0.0.0', debug=False, port=5000)
