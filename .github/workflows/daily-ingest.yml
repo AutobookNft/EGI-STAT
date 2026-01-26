@@ -26,12 +26,13 @@ jobs:
         
     - name: Run Daily Ingest (Last 7 days)
       env:
-        DB_HOST: ${{ secrets.DB_HOST }}
-        DB_PORT: ${{ secrets.DB_PORT }}
-        DB_DATABASE: ${{ secrets.DB_DATABASE }}
-        DB_USERNAME: ${{ secrets.DB_USERNAME }}
-        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DB_HOST: localhost
+      run: |
+        cd backend
+        set -a  # auto-export vars
+        source .env.gh-actions
+        set +a
+        python ingest_to_remotedb.py --days 7
       run: |
         cd backend
         python ingest_to_remotedb.py --days 7
