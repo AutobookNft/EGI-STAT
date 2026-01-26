@@ -1,0 +1,22 @@
+*   Trying 127.0.0.1:5000...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Connected to localhost (127.0.0.1) port 5000 (#0)
+> GET /api/stats/weekly HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/7.81.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Server: Werkzeug/3.1.5 Python/3.10.12
+< Date: Fri, 23 Jan 2026 00:12:53 GMT
+< Content-Type: application/json
+< Content-Length: 2479
+< Access-Control-Allow-Origin: *
+< Connection: close
+< 
+{ [2479 bytes data]
+100  2479  100  2479    0     0   4104      0 --:--:-- --:--:-- --:--:--  4104100  2479  100  2479    0     0   4101      0 --:--:-- --:--:-- --:--:--  4104
+* Closing connection 0
+[{"metrics":{"lines_touched":64558,"total_commits":99,"weighted_commits":108.79999999999998},"productivity_score":7543.8,"week":4,"year":2026},{"metrics":{"lines_touched":163392,"total_commits":204,"weighted_commits":236.29999999999995},"productivity_score":18702.2,"week":3,"year":2026},{"metrics":{"lines_touched":85067,"total_commits":99,"weighted_commits":109.3},"productivity_score":9599.7,"week":2,"year":2026},{"metrics":{"lines_touched":26517,"total_commits":45,"weighted_commits":32.5},"productivity_score":2976.7,"week":1,"year":2026},{"metrics":{"lines_touched":18009,"total_commits":12,"weighted_commits":15.1},"productivity_score":1951.9,"week":52,"year":2025},{"metrics":{"lines_touched":9275,"total_commits":30,"weighted_commits":38.8},"productivity_score":1315.5,"week":51,"year":2025},{"metrics":{"lines_touched":15077,"total_commits":59,"weighted_commits":76.5},"productivity_score":2272.7,"week":50,"year":2025},{"metrics":{"lines_touched":206859,"total_commits":105,"weighted_commits":123.89999999999999},"productivity_score":21924.9,"week":49,"year":2025},{"metrics":{"lines_touched":209711,"total_commits":70,"weighted_commits":76.30000000000001},"productivity_score":21734.1,"week":48,"year":2025},{"metrics":{"lines_touched":77256,"total_commits":146,"weighted_commits":175.3},"productivity_score":9478.6,"week":47,"year":2025},{"metrics":{"lines_touched":7147,"total_commits":31,"weighted_commits":40.10000000000001},"productivity_score":1115.7,"week":46,"year":2025},{"metrics":{"lines_touched":58929,"total_commits":185,"weighted_commits":214.59999999999997},"productivity_score":8038.9,"week":45,"year":2025},{"metrics":{"lines_touched":154630,"total_commits":298,"weighted_commits":363.8},"productivity_score":19101.0,"week":44,"year":2025},{"metrics":{"lines_touched":3304212,"total_commits":462,"weighted_commits":523.1000000000006},"productivity_score":335652.2,"week":43,"year":2025},{"metrics":{"lines_touched":89141,"total_commits":313,"weighted_commits":373.8000000000002},"productivity_score":12652.100000000002,"week":42,"year":2025},{"metrics":{"lines_touched":875227,"total_commits":122,"weighted_commits":140.5},"productivity_score":88927.7,"week":41,"year":2025},{"metrics":{"lines_touched":71834,"total_commits":158,"weighted_commits":192.89999999999995},"productivity_score":9112.4,"week":40,"year":2025},{"metrics":{"lines_touched":39238,"total_commits":41,"weighted_commits":47.6},"productivity_score":4399.8,"week":39,"year":2025}]

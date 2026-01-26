@@ -1,0 +1,22 @@
+*   Trying 127.0.0.1:5000...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Connected to localhost (127.0.0.1) port 5000 (#0)
+> GET /api/stats/daily_detail?date=2026-01-22 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/7.81.0
+> Accept: */*
+> 
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Server: Werkzeug/3.1.5 Python/3.10.12
+< Date: Fri, 23 Jan 2026 00:12:52 GMT
+< Content-Type: application/json
+< Content-Length: 1683
+< Access-Control-Allow-Origin: *
+< Connection: close
+< 
+{ [1683 bytes data]
+100  1683  100  1683    0     0   3125      0 --:--:-- --:--:-- --:--:--  3122
+* Closing connection 0
+{"date":"2026-01-22","repositories":[{"coding_hours":11.366666666666667,"cognitive_load":3.5,"day_type":"REFACTORING","day_type_icon":"\ud83d\udd27","files_touched":12,"lines_added":14603,"lines_deleted":3284,"net_lines":11319,"productivity_score":663.8142857142858,"repo_name":"AutobookNft/NATAN_LOC","testing_hours":11.366666666666667,"total_commits":31,"weighted_commits":41.7},{"coding_hours":1.1,"cognitive_load":3.3332229412569085,"day_type":"FEATURE_DEV","day_type_icon":"\u2728","files_touched":30,"lines_added":9609,"lines_deleted":82,"net_lines":9527,"productivity_score":293.3197140516872,"repo_name":"AutobookNft/EGI-STAT","testing_hours":1.1,"total_commits":3,"weighted_commits":2.5},{"coding_hours":6.966666666666667,"cognitive_load":3.5,"day_type":"MIXED","day_type_icon":"\ufffd\ufffd","files_touched":74,"lines_added":7329,"lines_deleted":2042,"net_lines":5287,"productivity_score":219.34285714285716,"repo_name":"AutobookNft/EGI","testing_hours":6.966666666666667,"total_commits":19,"weighted_commits":23.9},{"coding_hours":1.1,"cognitive_load":2.656250405187234,"day_type":"MIXED","day_type_icon":"\ufffd\ufffd","files_touched":6,"lines_added":584,"lines_deleted":154,"net_lines":430,"productivity_score":27.858819279797487,"repo_name":"AutobookNft/EGI-HUB","testing_hours":1.1,"total_commits":3,"weighted_commits":3.1}],"summary":{"coding_hours":20.533333333333335,"cognitive_load":3.2473683366110357,"day_type":"MIXED","day_type_icon":"\ufffd\ufffd","files_touched":122,"lines_added":32125,"lines_deleted":5562,"net_lines":26563,"productivity_score":1204.3356761886275,"testing_hours":20.533333333333335,"total_commits":56,"weighted_commits":71.19999999999999}}
