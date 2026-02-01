@@ -144,6 +144,91 @@ Questo comando può essere schedulato (ad esempio con `cron` e lo script `daily_
 
 ---
 
+## Deployment su Laravel Forge
+
+Se usi **Laravel Forge su AWS**, segui questi step:
+
+### 1. Deploy Script
+
+Nella dashboard Forge, sezione **Deploy Script**, aggiungi questo contenuto:
+
+```bash
+$CREATE_RELEASE()
+
+cd $FORGE_RELEASE_DIRECTORY
+
+# --- 1. FRONTEND BUILD ---
+echo "📦 Building Frontend..."
+cd frontend
+npm install
+npm run build
+
+# --- 2. BACKEND SETUP ---
+echo "🐍 Setting up Backend..."
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# --- 3. SETUP CRON JOB ---
+echo "⏰ Configuring daily ingestion..."
+CRON_JOB="0 6 * * * cd /home/forge/egi-stat.13.53.205.215.sslip.io/current/backend && source .venv/bin/activate && python ingest_to_remotedb.py --days 7"
+(crontab -l 2>/dev/null | grep -v "ingest_to_remotedb.py" || true; echo "$CRON_JOB") | crontab -
+
+$ACTIVATE_RELEASE()
+```
+
+### 2. Configurare le Variabili d'Ambiente
+
+Su Forge Dashboard → **Environment**, aggiungi:
+
+```
+DB_HOST=florenceegi-postgres-dev.c1i0048yu660.eu-north-1.rds.amazonaws.com
+DB_PORT=5432
+DB_DATABASE=florenceegi
+DB_USERNAME=florence_app
+DB_PASSWORD=<your_db_password>
+DB_SCHEMA=stat
+GITHUB_TOKEN=<your_github_pat_token>
+```
+
+### 3. Creare il Daemon per l'API
+
+Su Forge Dashboard → **Daemons** → **Create Daemon**:
+
+- **Command**:
+  ```
+  /home/forge/egi-stat.13.53.205.215.sslip.io/current/backend/.venv/bin/python /home/forge/egi-stat.13.53.205.215.sslip.io/current/backend/api.py
+  ```
+- **User**: `forge`
+- **Processes**: `1`
+- **Restart**: `yes`
+
+Salva → Il daemon rimarrà sempre attivo.
+
+### 4. Verifica
+
+```bash
+# Test API
+curl https://egi-stat.13.53.205.215.sslip.io/api/stats/weekly
+
+# SSH per log
+ssh forge@13.53.205.215
+ps aux | grep python  # Vedi se api.py gira
+```
+
+### 5. Cron Automatico
+
+Il deployment configura automaticamente il cron job che gira ogni giorno alle 6:00 UTC per aggiornare le statistiche.
+
+Verifica con:
+
+```bash
+crontab -l
+```
+
+---
+
 ## Comandi Utili
 
 Di seguito una lista di comandi utili per interagire con il sistema di analisi.
