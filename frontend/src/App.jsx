@@ -4,6 +4,9 @@ import DailyStats from './components/DailyStats';
 import { LayoutDashboard, RefreshCcw, Calendar, GitCommit } from 'lucide-react';
 import './item.css';
 
+// Determina l'URL base dell'API
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 function App() {
   const [allStats, setAllStats] = useState([]);
   const [stats, setStats] = useState([]);
@@ -14,7 +17,7 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/stats/weekly');
+        const response = await fetch(`${API_BASE_URL}/api/stats/weekly`);
         if (response.ok) {
           const data = await response.json();
           if (data && data.length > 0) {
