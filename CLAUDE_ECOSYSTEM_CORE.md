@@ -10,25 +10,32 @@
 
 ```
 ━━━ ORGANI CORE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  EGI               → Organo principale. Creator economy, AMMk personali,
-                      blockchain Algorand, wallet Egili, certificazione asset.
+  EGI               → Cuore operativo dell'organismo. Tre livelli:
+                      1. AMMk — creator economy, asset blockchain Algorand
+                      2. Backend condiviso — servizi core per tutti gli organi
+                         (Egili, auth, payment, RAG piattaforma, Feature pricing)
+                      3. Host prodotti — Sigillo, NPE e futuri prodotti che
+                         dipendono dal core (Egili + auth + blockchain)
                       URL: art.florenceegi.com | Path: /home/fabio/EGI/
 
   EGI-HUB           → Cervello frontale. Unico SSOT per config di tutti gli organi.
                       Nessun organo si auto-configura. Autorità gerarchica assoluta.
-                      Path: /home/fabio/EGI-HUB/
+                      URL: hub.florenceegi.com | Path: /home/fabio/EGI-HUB/
+                      Status: IN PRODUZIONE
 
 ━━━ SUPERFICIE PUBBLICA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   EGI-HUB-HOME      → Vetrina 3D world-class. Punto di accesso pubblico ecosistema.
-                      Contiene Sigillo come feature integrata.
+                      Integra Sigillo come entrypoint secondario (/sigillo), ma
+                      Sigillo mantiene identita pubblica autonoma (egi-sigillo.florenceegi.com).
                       URL: florenceegi.com | Path: /home/fabio/EGI-HUB-HOME-REACT/
 
   Sigillo           → Certificazione blockchain di file (SHA-256 + Algorand + TSA RFC 3161).
-                      Frontend: EGI-HUB-HOME-REACT (/sigillo) | Backend: EGI (Laravel)
-                      URL: florenceegi.com/sigillo | Status: IN PRODUZIONE
+                      Frontend: EGI-SIGILLO (SPA React autonoma) | Backend: EGI (Laravel)
+                      URL: egi-sigillo.florenceegi.com | Status: IN PRODUZIONE
 
   EGI-INFO          → SPA informativa pubblica FlorenceEGI (React TS, no backend).
                       URL: info.florenceegi.com | Path: /home/fabio/EGI-INFO/
+                      Status: IN PRODUZIONE
 
 ━━━ ORGANI COGNITIVI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   NATAN_LOC         → Organo cognitivo documentale. RAG su atti PA + AI per Comuni.
@@ -36,6 +43,7 @@
 
   EGI-Credential    → Wallet competenze professionali certificate su Algorand.
                       URL: egi-credential.florenceegi.com | Path: /home/fabio/EGI-Credential/
+                      Status: IN PRODUZIONE (maturita funzionale parziale)
 
 ━━━ STRUMENTI INTERNI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   EGI-STAT          → Dashboard produttività sviluppatori (GitHub metrics, commit analysis).
@@ -52,6 +60,12 @@
 **DB condiviso** — AWS RDS PostgreSQL eu-north-1 (`florenceegi`):
 EGI · EGI-HUB · NATAN_LOC · EGI-Credential · Sigillo (via EGI) condividono:
 `core.users` · `core.egis` · `core.wallets` · `core.egili_transactions` · `core.gdpr_*`
+
+**Mente dell'Organismo** — SSOT (`EGI-DOC/docs/`) → RAG piattaforma (`rag_natan.*`) → ai_sidebar in ogni organo.
+Tutti gli SSOT vengono indicizzati nel RAG piattaforma. Ogni organo ha una sidebar AI con chat
+che interroga questo RAG. L'utente parla con l'organismo e riceve risposte fondate sulla
+documentazione reale — contestuali al progetto e all'intero ecosistema.
+SSOT doc: `EGI-DOC/docs/lso/00_LSO_LIVING_SOFTWARE_ORGANISM.md`
 
 ---
 
