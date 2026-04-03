@@ -223,6 +223,24 @@ element.innerHTML = DOMPurify.sanitize(content);
 
 ---
 
+## 📋 Mission Registry (P0)
+
+```
+SSOT: /home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json
+Report: /home/fabio/EGI-DOC/docs/missions/M-NNN_TITOLO.md
+
+Ad ogni /mission:
+  1. LEGGI MISSION_REGISTRY.json → prendi counter attuale
+  2. INCREMENTA counter → nuova mission = M-{counter+1:03d}
+  3. AGGIUNGI entry nel JSON (status: in_progress)
+  4. A fine mission: aggiorna status → completed, scrivi report M-NNN_TITOLO.md
+  5. COMMIT registry + report
+
+ID format: M-001, M-002, ... M-NNN
+```
+
+---
+
 ## 📝 Tag Commit
 
 ```
