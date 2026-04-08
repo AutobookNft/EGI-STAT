@@ -95,9 +95,60 @@ def init_db():
             )
         """).format(sql.Identifier(DB_SCHEMA)))
         
+        # Table: Mission Stats (from MISSION_REGISTRY.json)
+        cur.execute(sql.SQL("""
+            CREATE TABLE IF NOT EXISTS {}.mission_stats (
+                mission_id VARCHAR(10) PRIMARY KEY,
+                title TEXT,
+                date_opened DATE,
+                date_closed DATE,
+                status VARCHAR(20),
+                mission_type VARCHAR(30),
+                organs JSONB DEFAULT '[]'::jsonb,
+                repos JSONB DEFAULT '[]'::jsonb,
+                cross_organ BOOLEAN DEFAULT FALSE,
+                files_modified JSONB DEFAULT '[]'::jsonb,
+                files_count INT DEFAULT 0,
+                files_created INT DEFAULT 0,
+                doc_sync_executed BOOLEAN DEFAULT FALSE,
+                doc_verified BOOLEAN DEFAULT FALSE,
+                duration_days INT DEFAULT 1,
+                type_weight FLOAT DEFAULT 1.0,
+                ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """).format(sql.Identifier(DB_SCHEMA)))
+
+        # Add mission-aware columns to daily_stats (if not exist)
+        for col_def in [
+            ("mission_ids", "JSONB DEFAULT '[]'::jsonb"),
+            ("mission_types", "JSONB DEFAULT '[]'::jsonb"),
+            ("mission_count", "INT DEFAULT 0"),
+            ("doc_sync_count", "INT DEFAULT 0"),
+            ("cross_organ", "BOOLEAN DEFAULT FALSE"),
+        ]:
+            try:
+                cur.execute(sql.SQL(
+                    "ALTER TABLE {}.daily_stats ADD COLUMN IF NOT EXISTS {} " + col_def[1]
+                ).format(sql.Identifier(DB_SCHEMA), sql.Identifier(col_def[0])))
+            except Exception:
+                pass  # Column already exists
+
+        # Add mission-aware columns to weekly_stats (if not exist)
+        for col_def in [
+            ("mission_count", "INT DEFAULT 0"),
+            ("mission_types", "JSONB DEFAULT '[]'::jsonb"),
+            ("doc_sync_rate", "FLOAT DEFAULT 0"),
+        ]:
+            try:
+                cur.execute(sql.SQL(
+                    "ALTER TABLE {}.weekly_stats ADD COLUMN IF NOT EXISTS {} " + col_def[1]
+                ).format(sql.Identifier(DB_SCHEMA), sql.Identifier(col_def[0])))
+            except Exception:
+                pass
+
         print("✅ Database initialization complete.")
         print(f"   - Schema: {DB_SCHEMA}")
-        print("   - Tables: commits, daily_stats, weekly_stats")
+        print("   - Tables: commits, daily_stats, weekly_stats, mission_stats")
         
         cur.close()
         conn.close()

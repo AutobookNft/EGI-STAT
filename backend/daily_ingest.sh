@@ -24,5 +24,13 @@ else
     python3 ingest_to_remotedb.py --days 1 >> cron_ingest.log 2>&1
 fi
 
+# Mission-based enrichment (reads MISSION_REGISTRY.json from EGI-DOC)
+echo "📋 Starting Mission Enrichment..." >> cron_ingest.log
+if [ -f "$VENV_PYTHON" ]; then
+    $VENV_PYTHON ingest_missions.py --days 7 >> cron_ingest.log 2>&1
+else
+    python3 ingest_missions.py --days 7 >> cron_ingest.log 2>&1
+fi
+
 echo "✅ Finished: $(date)" >> cron_ingest.log
 echo "------------------------------------------------" >> cron_ingest.log
