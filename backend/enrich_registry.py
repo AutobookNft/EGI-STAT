@@ -64,11 +64,16 @@ def parse_tag(message):
 
 
 def git_log_stats(repo_dir, since, until):
-    """Run git log --numstat and return parsed data."""
+    """Run git log --numstat for a date range (fallback for old missions without files_modified).
+    Adds 1 day buffer and searches all branches."""
     try:
+        from datetime import datetime as _dt, timedelta as _td
+        d_since = _dt.strptime(since[:10], "%Y-%m-%d") - _td(days=1)
+        d_until = _dt.strptime(until[:10], "%Y-%m-%d") + _td(days=1)
         result = subprocess.run(
-            ["git", "-C", repo_dir, "log",
-             f"--since={since}", f"--until={until} 23:59:59",
+            ["git", "-C", repo_dir, "log", "--all",
+             f"--since={d_since.strftime('%Y-%m-%d')}",
+             f"--until={d_until.strftime('%Y-%m-%d')} 23:59:59",
              "--pretty=format:%H|%s", "--numstat"],
             capture_output=True, text=True, timeout=30
         )
@@ -77,37 +82,61 @@ def git_log_stats(repo_dir, since, until):
         return ""
 
 
+def _git_log_by_files(repo_dir, since, until, files):
+    """Run git log --numstat filtered by specific files.
+    Adds 1 day buffer on both sides to handle timezone issues.
+    Searches all branches.
+    Filters out glob patterns (git log doesn't support them).
+    """
+    # Remove glob patterns — git log doesn't handle them
+    clean_files = [f for f in files if "*" not in f and "~" not in f]
+    if not clean_files:
+        return ""
+
+    # Add 1 day buffer for timezone safety
+    try:
+        from datetime import datetime, timedelta
+        d_since = datetime.strptime(since[:10], "%Y-%m-%d") - timedelta(days=1)
+        d_until = datetime.strptime(until[:10], "%Y-%m-%d") + timedelta(days=1)
+        since_str = d_since.strftime("%Y-%m-%d")
+        until_str = d_until.strftime("%Y-%m-%d 23:59:59")
+    except Exception:
+        since_str = since
+        until_str = f"{until} 23:59:59"
+
+    try:
+        cmd = [
+            "git", "-C", repo_dir, "log", "--all",
+            f"--since={since_str}", f"--until={until_str}",
+            "--pretty=format:%H|%s", "--numstat", "--"
+        ] + clean_files
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        return result.stdout.strip()
+    except Exception:
+        return ""
+
+
 def calculate_stats_for_mission(mission):
-    """Calculate real stats from git log for a mission."""
-    organs = mission.get("organi_coinvolti", [])
+    """Calculate real stats from git log for a mission.
+
+    Uses files_modified to find the exact commits of this mission,
+    not just all commits in the date range.
+    """
     date_opened = mission.get("data_apertura")
     date_closed = mission.get("data_chiusura")
+    files_modified = mission.get("files_modified", [])
 
     if not date_opened or not date_closed or date_closed == "pending":
         return None
 
-    # Find dirs to scan
-    dirs = []
-    for organ in organs:
-        d = PROJECT_DIRS.get(organ)
-        if d and Path(d).exists():
-            dirs.append(d)
+    all_dirs = [d for d in PROJECT_DIRS.values() if d and Path(d).exists()]
 
-    if not dirs:
-        # If no matching dirs, return stats based on files_modified only
-        fm = mission.get("files_modified", [])
+    if not all_dirs:
         return {
-            "total_commits": 0,
-            "lines_added": 0,
-            "lines_deleted": 0,
-            "lines_net": 0,
-            "lines_touched": 0,
-            "files_touched": len(fm),
-            "weighted_commits": 0,
-            "cognitive_load": 1.0,
-            "productivity_index": 0,
-            "tags_breakdown": {},
-            "calculated_at": datetime.now().strftime("%Y-%m-%d"),
+            "total_commits": 0, "lines_added": 0, "lines_deleted": 0,
+            "lines_net": 0, "lines_touched": 0, "files_touched": len(files_modified),
+            "weighted_commits": 0, "cognitive_load": 1.0, "productivity_index": 0,
+            "tags_breakdown": {}, "calculated_at": datetime.now().strftime("%Y-%m-%d"),
         }
 
     total_commits = 0
@@ -115,9 +144,30 @@ def calculate_stats_for_mission(mission):
     lines_deleted = 0
     files_set = set()
     tag_counts = {}
+    seen_hashes = set()
 
-    for repo_dir in dirs:
-        log_output = git_log_stats(repo_dir, date_opened, date_closed)
+    for repo_dir in all_dirs:
+        # Strategy: use files_modified to find specific commits
+        # files_modified paths are relative to the repo (e.g. "app/Services/Foo.php")
+        # Some have prefixes like "EGI-DOC/docs/..." or "~/.claude/..." — skip those
+        repo_name = Path(repo_dir).name
+        repo_files = []
+        for f in files_modified:
+            # Strip common prefixes
+            clean = f
+            for prefix in ["EGI-DOC/", "EGI-STAT/", "~/.claude/", "oracode/"]:
+                if clean.startswith(prefix):
+                    clean = clean[len(prefix):]
+            repo_files.append(clean)
+
+        if repo_files:
+            # git log filtered by specific files
+            file_args = " ".join(f'"{f}"' for f in repo_files)
+            log_output = _git_log_by_files(repo_dir, date_opened, date_closed, repo_files)
+        else:
+            # No files_modified — fall back to date range (old missions)
+            log_output = git_log_stats(repo_dir, date_opened, date_closed)
+
         if not log_output:
             continue
 
@@ -125,17 +175,19 @@ def calculate_stats_for_mission(mission):
             if not line.strip():
                 continue
 
-            # Commit line: hash|message
             if "|" in line:
                 parts = line.split("|", 1)
                 if len(parts[0]) >= 30:
+                    commit_hash = parts[0].strip()
+                    if commit_hash in seen_hashes:
+                        continue  # deduplicate across repos
+                    seen_hashes.add(commit_hash)
                     total_commits += 1
                     msg = parts[1] if len(parts) > 1 else ""
                     tag = parse_tag(msg)
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
                     continue
 
-            # Numstat line: added\tdeleted\tfilename
             parts = line.split("\t")
             if len(parts) >= 3:
                 added = int(parts[0]) if parts[0] != "-" else 0
