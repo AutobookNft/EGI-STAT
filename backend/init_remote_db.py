@@ -114,6 +114,16 @@ def init_db():
                 doc_verified BOOLEAN DEFAULT FALSE,
                 duration_days INT DEFAULT 1,
                 type_weight FLOAT DEFAULT 1.0,
+                total_commits INT DEFAULT 0,
+                weighted_commits FLOAT DEFAULT 0,
+                lines_added INT DEFAULT 0,
+                lines_deleted INT DEFAULT 0,
+                lines_net INT DEFAULT 0,
+                lines_touched INT DEFAULT 0,
+                cognitive_load FLOAT DEFAULT 1.0,
+                productivity_index FLOAT DEFAULT 0,
+                day_type VARCHAR(50),
+                tags_breakdown JSONB DEFAULT '{}'::jsonb,
                 ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """).format(sql.Identifier(DB_SCHEMA)))

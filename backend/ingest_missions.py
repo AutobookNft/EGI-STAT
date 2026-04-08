@@ -1,24 +1,24 @@
 """
-Mission-based statistics enrichment pipeline.
+Mission Registry → DB pipeline.
 
-Reads completed missions from MISSION_REGISTRY.json and enriches
-the existing daily_stats and weekly_stats with structured mission data.
+Reads stats from MISSION_REGISTRY.json (the source of truth) and writes
+them into the same DB tables that EGI-STAT frontend already reads:
+daily_stats, weekly_stats, mission_stats.
 
-RULES:
-- Existing stats from commits are NEVER deleted
-- Only days/repos that overlap with a closed mission get enriched
-- Mission data overwrites commit-derived classification when available
-  (mission_type is more accurate than tag-based day_type)
+Existing data from commits stays. Where a mission overlaps with an
+existing day+repo row, the mission data overwrites it (more precise).
 
 @author Padmin D. Curtis (AI Partner OS3.0) for Fabio Cherici
-@version 1.0.0 (FlorenceEGI — EGI-STAT)
+@version 3.0.0 (FlorenceEGI — EGI-STAT)
 @date 2026-04-08
-@purpose Enrich EGI-STAT with mission-aware metrics
+@purpose Registry JSON → DB. That's it.
 """
 
+import json
 import os
 import sys
 import argparse
+import math
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 import psycopg2
@@ -26,10 +26,6 @@ from psycopg2.extras import Json
 import dotenv
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent / "core"))
-from core.mission_client import MissionClient, MissionStats
-
-# Load env
 dotenv.load_dotenv(Path(__file__).parent / ".env")
 
 DB_HOST = os.getenv("DB_HOST")
@@ -39,6 +35,24 @@ DB_USER = os.getenv("DB_USERNAME")
 DB_PASS = os.getenv("DB_PASSWORD")
 DB_SCHEMA = os.getenv("DB_SCHEMA", "stat")
 
+REGISTRY_PATH = os.getenv(
+    "MISSION_REGISTRY_PATH",
+    "/home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json"
+)
+
+# Organ name → repo_name as it appears in stat.daily_stats / stat.commits
+ORGAN_TO_REPO = {
+    "EGI": "florenceegi/EGI",
+    "EGI-HUB": "florenceegi/EGI-HUB",
+    "EGI-HUB-HOME": "florenceegi/EGI-HUB-HOME-REACT",
+    "EGI-SIGILLO": "florenceegi/EGI-SIGILLO",
+    "EGI-Credential": "florenceegi/egi-credential",
+    "NATAN_LOC": "florenceegi/NATAN_LOC",
+    "EGI-INFO": "florenceegi/EGI-INFO",
+    "EGI-DOC": "florenceegi/EGI-DOC",
+    "EGI-STAT": "florenceegi/EGI-STAT",
+}
+
 
 def get_connection():
     return psycopg2.connect(
@@ -47,188 +61,173 @@ def get_connection():
     )
 
 
-def ingest_mission_stats(missions: list[MissionStats], conn):
-    """Insert/update mission_stats table."""
+def load_missions():
+    """Load completed missions with stats from MISSION_REGISTRY.json."""
+    with open(REGISTRY_PATH) as f:
+        registry = json.load(f)
+
+    missions = []
+    for m in registry.get("missions", []):
+        if m.get("stato") != "completed":
+            continue
+        if not m.get("stats"):
+            continue
+        if not m.get("data_apertura") or not m.get("data_chiusura") or m["data_chiusura"] == "pending":
+            continue
+        missions.append(m)
+
+    return missions
+
+
+def write_mission_stats(missions, conn):
+    """Write each mission's stats into stat.mission_stats."""
     cur = conn.cursor()
+
     for m in missions:
+        s = m["stats"]
+        organs = m.get("organi_coinvolti", [])
+        repos = [ORGAN_TO_REPO[o] for o in organs if o in ORGAN_TO_REPO]
+
         cur.execute(f"""
             INSERT INTO {DB_SCHEMA}.mission_stats
                 (mission_id, title, date_opened, date_closed, status,
                  mission_type, organs, repos, cross_organ,
                  files_modified, files_count, files_created,
-                 doc_sync_executed, doc_verified, duration_days, type_weight)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 doc_sync_executed, doc_verified, duration_days, type_weight,
+                 total_commits, weighted_commits, lines_added, lines_deleted,
+                 lines_net, lines_touched, cognitive_load, productivity_index,
+                 day_type, tags_breakdown)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (mission_id) DO UPDATE SET
-                title = EXCLUDED.title,
-                date_closed = EXCLUDED.date_closed,
-                status = EXCLUDED.status,
-                mission_type = EXCLUDED.mission_type,
-                organs = EXCLUDED.organs,
-                repos = EXCLUDED.repos,
-                cross_organ = EXCLUDED.cross_organ,
-                files_modified = EXCLUDED.files_modified,
-                files_count = EXCLUDED.files_count,
-                files_created = EXCLUDED.files_created,
-                doc_sync_executed = EXCLUDED.doc_sync_executed,
-                doc_verified = EXCLUDED.doc_verified,
-                duration_days = EXCLUDED.duration_days,
-                type_weight = EXCLUDED.type_weight,
-                ingested_at = CURRENT_TIMESTAMP
+                title=EXCLUDED.title, date_closed=EXCLUDED.date_closed,
+                status=EXCLUDED.status, mission_type=EXCLUDED.mission_type,
+                organs=EXCLUDED.organs, repos=EXCLUDED.repos,
+                cross_organ=EXCLUDED.cross_organ, files_modified=EXCLUDED.files_modified,
+                files_count=EXCLUDED.files_count, doc_sync_executed=EXCLUDED.doc_sync_executed,
+                total_commits=EXCLUDED.total_commits, weighted_commits=EXCLUDED.weighted_commits,
+                lines_added=EXCLUDED.lines_added, lines_deleted=EXCLUDED.lines_deleted,
+                lines_net=EXCLUDED.lines_net, lines_touched=EXCLUDED.lines_touched,
+                cognitive_load=EXCLUDED.cognitive_load, productivity_index=EXCLUDED.productivity_index,
+                day_type=EXCLUDED.day_type, tags_breakdown=EXCLUDED.tags_breakdown,
+                ingested_at=CURRENT_TIMESTAMP
         """, (
-            m.mission_id, m.title, m.date_opened, m.date_closed, m.status,
-            m.mission_type, Json(m.organs), Json(m.repos), m.cross_organ,
-            Json(m.files_modified), m.files_count, m.files_created,
-            m.doc_sync_executed, m.doc_verified, m.duration_days, m.type_weight
+            m["mission_id"], m.get("titolo", ""), m["data_apertura"], m["data_chiusura"],
+            m.get("stato"), m.get("tipo_missione"), Json(organs), Json(repos),
+            m.get("cross_organo", False), Json(m.get("files_modified", [])),
+            s.get("files_touched", 0), m.get("files_created", 0),
+            m.get("doc_sync_executed", False), m.get("doc_verified", False),
+            max(1, (datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d") -
+                     datetime.strptime(m["data_apertura"][:10], "%Y-%m-%d")).days + 1),
+            1.0,
+            s["total_commits"], s["weighted_commits"], s["lines_added"], s["lines_deleted"],
+            s["lines_net"], s["lines_touched"], s["cognitive_load"], s["productivity_index"],
+            s.get("day_type", "MIXED"), Json(s.get("tags_breakdown", {}))
         ))
+
+        print(f"  {m['mission_id']} | {s['total_commits']:3d} commits | "
+              f"+{s['lines_added']:5d} -{s['lines_deleted']:5d} = {s['lines_net']:+6d} net | "
+              f"{s['files_touched']:3d} files | PI:{s['productivity_index']:7.2f}")
+
     conn.commit()
-    print(f"  ✓ {len(missions)} missions upserted into mission_stats")
+    print(f"\n  ✓ {len(missions)} missions → mission_stats")
 
 
-def enrich_daily_stats(missions: list[MissionStats], conn):
-    """
-    Enrich daily_stats with mission data.
-    For each day covered by a mission, update the mission-aware columns.
-    """
+def enrich_daily_stats(missions, conn):
+    """Overwrite daily_stats where a mission overlaps with existing rows."""
     cur = conn.cursor()
+    updated = 0
 
-    # Build a map: date → list of missions active on that date
-    date_missions: dict[date, list[MissionStats]] = defaultdict(list)
     for m in missions:
-        if not m.date_closed:
+        s = m["stats"]
+        if s["total_commits"] == 0:
             continue
-        d = m.date_opened
-        while d <= m.date_closed:
-            date_missions[d].append(m)
+
+        date_opened = datetime.strptime(m["data_apertura"][:10], "%Y-%m-%d").date()
+        date_closed = datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d").date()
+        organs = m.get("organi_coinvolti", [])
+        repos = [ORGAN_TO_REPO[o] for o in organs if o in ORGAN_TO_REPO]
+
+        mission_ids = [m["mission_id"]]
+        mission_types = [m.get("tipo_missione", "feature")]
+        is_cross = m.get("cross_organo", False)
+
+        # For each day in the mission range, update matching daily_stats rows
+        d = date_opened
+        while d <= date_closed:
+            for repo in repos:
+                cur.execute(f"""
+                    UPDATE {DB_SCHEMA}.daily_stats
+                    SET mission_ids = %s,
+                        mission_types = %s,
+                        mission_count = COALESCE(mission_count, 0) + 1,
+                        doc_sync_count = CASE WHEN %s THEN COALESCE(doc_sync_count, 0) + 1 ELSE COALESCE(doc_sync_count, 0) END,
+                        cross_organ = %s
+                    WHERE date = %s AND repo_name = %s
+                      AND (mission_ids IS NULL OR NOT mission_ids @> %s::jsonb)
+                """, (
+                    Json(mission_ids), Json(mission_types),
+                    m.get("doc_sync_executed", False), is_cross,
+                    d, repo, Json(mission_ids)
+                ))
+                updated += cur.rowcount
             d += timedelta(days=1)
 
-    updated = 0
-    for day, day_missions in date_missions.items():
-        mission_ids = [m.mission_id for m in day_missions]
-        mission_types = list(set(m.mission_type for m in day_missions))
-        mission_count = len(day_missions)
-        doc_sync_count = sum(1 for m in day_missions if m.doc_sync_executed)
-        is_cross = any(m.cross_organ for m in day_missions)
-
-        # Get all repos involved on this day
-        day_repos = set()
-        for m in day_missions:
-            day_repos.update(m.repos)
-
-        # Update daily_stats for each repo that has an existing row for this date
-        # We DON'T create new rows — only enrich existing ones
-        for repo in day_repos:
-            cur.execute(f"""
-                UPDATE {DB_SCHEMA}.daily_stats
-                SET mission_ids = %s,
-                    mission_types = %s,
-                    mission_count = %s,
-                    doc_sync_count = %s,
-                    cross_organ = %s
-                WHERE date = %s AND repo_name = %s
-            """, (
-                Json(mission_ids), Json(mission_types), mission_count,
-                doc_sync_count, is_cross, day, repo
-            ))
-            if cur.rowcount > 0:
-                updated += cur.rowcount
-
-        # Also update rows where repo_name matches organ names (some repos use different naming)
-        # Handle the "all repos" case for ecosystem-wide missions
-        if any(m.cross_organ for m in day_missions):
-            cur.execute(f"""
-                UPDATE {DB_SCHEMA}.daily_stats
-                SET mission_ids = %s,
-                    mission_types = %s,
-                    mission_count = %s,
-                    doc_sync_count = %s,
-                    cross_organ = TRUE
-                WHERE date = %s
-                  AND mission_count = 0
-            """, (
-                Json(mission_ids), Json(mission_types), mission_count,
-                doc_sync_count, day
-            ))
-            updated += cur.rowcount
-
     conn.commit()
-    print(f"  ✓ {updated} daily_stats rows enriched with mission data")
+    print(f"  ✓ {updated} daily_stats rows enriched")
 
 
-def enrich_weekly_stats(missions: list[MissionStats], conn):
-    """
-    Enrich weekly_stats with mission counts and doc_sync rate.
-    """
+def enrich_weekly_stats(missions, conn):
+    """Update weekly_stats with mission counts."""
     cur = conn.cursor()
+    week_data = defaultdict(lambda: {"count": 0, "types": set(), "sync": 0})
 
-    # Group missions by ISO week
-    week_missions: dict[tuple[int, int], list[MissionStats]] = defaultdict(list)
     for m in missions:
-        if not m.date_closed:
+        if m["stats"]["total_commits"] == 0:
             continue
-        iso = m.date_closed.isocalendar()
-        week_missions[(iso[0], iso[1])].append(m)
+        dc = datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d").date()
+        iso = dc.isocalendar()
+        key = (iso[0], iso[1])
+        week_data[key]["count"] += 1
+        week_data[key]["types"].add(m.get("tipo_missione", "feature"))
+        if m.get("doc_sync_executed"):
+            week_data[key]["sync"] += 1
 
     updated = 0
-    for (year, week), wk_missions in week_missions.items():
-        mission_count = len(wk_missions)
-        mission_types = list(set(m.mission_type for m in wk_missions))
-        doc_sync_done = sum(1 for m in wk_missions if m.doc_sync_executed)
-        doc_sync_rate = doc_sync_done / mission_count if mission_count > 0 else 0
-
-        # Update all weekly_stats rows for this year/week
+    for (year, week), wd in week_data.items():
+        rate = wd["sync"] / wd["count"] if wd["count"] > 0 else 0
         cur.execute(f"""
             UPDATE {DB_SCHEMA}.weekly_stats
-            SET mission_count = %s,
-                mission_types = %s,
-                doc_sync_rate = %s
+            SET mission_count = %s, mission_types = %s, doc_sync_rate = %s
             WHERE year = %s AND week = %s
-        """, (mission_count, Json(mission_types), doc_sync_rate, year, week))
+        """, (wd["count"], Json(list(wd["types"])), rate, year, week))
         updated += cur.rowcount
 
     conn.commit()
-    print(f"  ✓ {updated} weekly_stats rows enriched with mission data")
+    print(f"  ✓ {updated} weekly_stats rows enriched")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mission-based statistics enrichment")
-    parser.add_argument("--days", type=int, default=None,
-                        help="Only process missions closed in the last N days")
-    parser.add_argument("--all", action="store_true",
-                        help="Process all completed missions")
-    args = parser.parse_args()
+    print(f"{'='*70}")
+    print(f"  Registry → DB Pipeline v3.0 — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  Source: {REGISTRY_PATH}")
+    print(f"{'='*70}\n")
 
-    print(f"{'='*50}")
-    print(f"  Mission Stats Enrichment — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    print(f"{'='*50}")
-
-    client = MissionClient()
-
-    if args.all:
-        missions = client.get_completed_missions()
-        print(f"  Found {len(missions)} completed missions (all time)")
-    elif args.days:
-        since = date.today() - timedelta(days=args.days)
-        missions = client.get_missions_since(since)
-        print(f"  Found {len(missions)} missions closed since {since}")
-    else:
-        # Default: last 7 days
-        since = date.today() - timedelta(days=7)
-        missions = client.get_missions_since(since)
-        print(f"  Found {len(missions)} missions closed in last 7 days")
+    missions = load_missions()
+    print(f"  {len(missions)} completed missions with stats\n")
 
     if not missions:
-        print("  No missions to process.")
+        print("  Nothing to ingest.")
         return
 
     conn = get_connection()
     try:
-        ingest_mission_stats(missions, conn)
+        write_mission_stats(missions, conn)
         enrich_daily_stats(missions, conn)
         enrich_weekly_stats(missions, conn)
     finally:
         conn.close()
 
-    print(f"\n  Done. {len(missions)} missions processed.")
+    print(f"\n  Done.")
 
 
 if __name__ == "__main__":
