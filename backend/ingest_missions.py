@@ -49,6 +49,7 @@ ORGAN_TO_REPO = {
     "EGI-INFO": "florenceegi/EGI-INFO",
     "EGI-DOC": "florenceegi/EGI-DOC",
     "EGI-STAT": "florenceegi/EGI-STAT",
+    "oracode": "florenceegi/oracode",
 }
 
 MISSION_TYPE_TO_DAY_TYPE = {
