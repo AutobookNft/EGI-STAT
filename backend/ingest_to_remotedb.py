@@ -45,9 +45,10 @@ def calculate_productivity_index(commits_weighted, lines_net, cognitive_load, da
     """Calculate productivity index."""
     if cognitive_load == 0:
         cognitive_load = 1.0
-    
-    # Use absolute value - both adding AND removing code is productive work
-    base_score = (commits_weighted * 10.0) + (abs(lines_net) / 10.0)
+
+    # Cap lines contribution: beyond 2000 net lines/day is bulk/asset, not productive code
+    capped_lines = min(abs(lines_net), 2000)
+    base_score = (commits_weighted * 10.0) + (capped_lines / 10.0)
     return (base_score * day_type_multiplier) / cognitive_load
 
 # Load env
@@ -74,14 +75,17 @@ def ingest_data(days_back=30, target_repo=None):
     print(f"🚀 Starting Ingestion (Last {days_back} days)...")
     
     # 1. Setup Client
-    # Valid list from config - ALL 6 REPOSITORIES
+    # All organ repositories in florenceegi org (EGI-STAT excluded — internal tool, not an organ)
     all_repos = [
-        "AutobookNft/EGI", 
-        "AutobookNft/EGI-HUB", 
-        "AutobookNft/EGI-HUB-HOME-REACT",
-        "AutobookNft/EGI-INFO",
-        "AutobookNft/EGI-STAT",
-        "AutobookNft/NATAN_LOC"
+        "florenceegi/EGI",
+        "florenceegi/EGI-HUB",
+        "florenceegi/EGI-HUB-HOME-REACT",
+        "florenceegi/EGI-INFO",
+        "florenceegi/NATAN_LOC",
+        "florenceegi/EGI-DOC",
+        "florenceegi/egi-credential",
+        "florenceegi/EGI-SIGILLO",
+        "florenceegi/oracode",
     ]
     
     if target_repo:
@@ -248,30 +252,52 @@ def ingest_data(days_back=30, target_repo=None):
                     coding_mins / 60.0, testing_mins / 60.0, Json(tag_counts)
                 ))
 
-            # 5. Insert Weekly Stats
+            # 5. Insert Weekly Stats — aggregate daily PI scores
             print(f"📊 {repo_name}: Updating Weekly Stats...")
+            # Build weekly PI by summing daily PIs for this repo
+            weekly_pi_from_daily = {}  # (year, week, repo) -> sum of daily PI
+            for (d, r2), items in daily_commits_map.items():
+                year, week, _ = d.isocalendar()
+                key = (year, week, r2)
+                if key not in weekly_pi_from_daily:
+                    weekly_pi_from_daily[key] = 0.0
+                # Re-compute daily PI (same formula as above)
+                tc = len(items)
+                wc = sum(i["weight"] for i in items)
+                la = sum(i["commit"].additions for i in items)
+                ld = sum(i["commit"].deletions for i in items)
+                lt = la + ld
+                ln = la - ld
+                fs = set()
+                for i in items:
+                    fs.update(i["commit"].files_changed)
+                tpc = Counter(i["tag"] for i in items)
+                tpp = {tag: (count / tc) * 100 for tag, count in tpc.items()}
+                _, _, tm = classify_day_type(tpp)
+                cl = calculate_cognitive_load(tc, len(fs), lt)
+                weekly_pi_from_daily[key] += calculate_productivity_index(wc, ln, cl, tm)
+
             for (y, w, r), items in weekly_commits_map.items():
-                # Simplified weekly aggregation
                 total_commits = len(items)
                 weighted_commits = sum(i["weight"] for i in items)
-                lines_net = sum(i["commit"].total_changes for i in items) # Using total changes for PI calculation consistency with old logic if needed, but sticking to net is safer? Let's use total for PI base logic
-                
-                # PI for week (simple sum of dailies or recomputed? Recomputing simplifies)
-                # Note: v7 week logic aggregates daily PI, here we approximate for compatibility
-                pi_score = (weighted_commits * 10.0) + (lines_net / 10.0)
-                
+                # Cap per-commit lines to avoid bulk/asset distortion
+                lines_touched = sum(min(i["commit"].additions + i["commit"].deletions, 2000) for i in items)
+
+                # Use sum of daily PIs (accurate) instead of raw formula
+                pi_score = round(weekly_pi_from_daily.get((y, w, r), 0.0), 1)
+
                 cur.execute("""
                     INSERT INTO weekly_stats (year, week, repo_name, productivity_score, metrics)
                     VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (year, week, repo_name) DO UPDATE 
+                    ON CONFLICT (year, week, repo_name) DO UPDATE
                     SET productivity_score = EXCLUDED.productivity_score,
                         metrics = EXCLUDED.metrics
                 """, (
-                    y, w, r, 
-                    pi_score, 
+                    y, w, r,
+                    pi_score,
                     Json({
-                        "weighted_commits": weighted_commits, 
-                        "lines_touched": sum(i["commit"].additions + i["commit"].deletions for i in items), 
+                        "weighted_commits": round(weighted_commits, 1),
+                        "lines_touched": lines_touched,
                         "total_commits": total_commits
                     })
                 ))
