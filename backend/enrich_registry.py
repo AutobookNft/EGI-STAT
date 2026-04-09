@@ -230,6 +230,7 @@ def calculate_stats_for_mission(mission):
         "cognitive_load": round(cl, 2),
         "productivity_index": round(pi, 2),
         "tags_breakdown": tag_counts,
+        "commit_hashes": sorted(seen_hashes),
         "calculated_at": datetime.now().strftime("%Y-%m-%d"),
     }
 
