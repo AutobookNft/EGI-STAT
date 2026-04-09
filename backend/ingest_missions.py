@@ -161,32 +161,50 @@ def write_to_daily_stats(missions, conn):
     return upserted
 
 
-def rebuild_weekly_stats(conn):
-    """Rebuild weekly_stats from daily_stats — ensures consistency."""
+def update_weekly_stats_for_missions(missions, conn):
+    """Update weekly_stats ONLY for weeks that have mission data.
+    Does NOT rebuild all weeks — preserves existing fixed data."""
     cur = conn.cursor()
 
-    cur.execute(f"""
-        INSERT INTO {DB_SCHEMA}.weekly_stats (year, week, repo_name, productivity_score, metrics)
-        SELECT
-            EXTRACT(ISOYEAR FROM date)::int as year,
-            EXTRACT(WEEK FROM date)::int as week,
-            repo_name,
-            SUM(productivity_score) as productivity_score,
-            jsonb_build_object(
-                'weighted_commits', SUM(weighted_commits),
-                'lines_touched', SUM(lines_added + lines_deleted),
-                'total_commits', SUM(total_commits)
-            ) as metrics
-        FROM {DB_SCHEMA}.daily_stats
-        GROUP BY year, week, repo_name
-        ON CONFLICT (year, week, repo_name) DO UPDATE SET
-            productivity_score = EXCLUDED.productivity_score,
-            metrics = EXCLUDED.metrics
-    """)
+    # Find which (year, week) combinations are affected by missions
+    affected_weeks = set()
+    for m in missions:
+        s = m["stats"]
+        if s["total_commits"] == 0 and s["lines_added"] == 0:
+            continue
+        dc = datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d").date()
+        iso = dc.isocalendar()
+        affected_weeks.add((iso[0], iso[1]))
 
-    updated = cur.rowcount
+    if not affected_weeks:
+        print("  ✓ No weekly_stats to update")
+        return
+
+    updated = 0
+    for (year, week) in affected_weeks:
+        cur.execute(f"""
+            INSERT INTO {DB_SCHEMA}.weekly_stats (year, week, repo_name, productivity_score, metrics)
+            SELECT
+                EXTRACT(ISOYEAR FROM date)::int as year,
+                EXTRACT(WEEK FROM date)::int as week,
+                repo_name,
+                SUM(productivity_score) as productivity_score,
+                jsonb_build_object(
+                    'weighted_commits', SUM(weighted_commits),
+                    'lines_touched', SUM(lines_added + lines_deleted),
+                    'total_commits', SUM(total_commits)
+                ) as metrics
+            FROM {DB_SCHEMA}.daily_stats
+            WHERE EXTRACT(ISOYEAR FROM date) = %s AND EXTRACT(WEEK FROM date) = %s
+            GROUP BY year, week, repo_name
+            ON CONFLICT (year, week, repo_name) DO UPDATE SET
+                productivity_score = EXCLUDED.productivity_score,
+                metrics = EXCLUDED.metrics
+        """, (year, week))
+        updated += cur.rowcount
+
     conn.commit()
-    print(f"  ✓ {updated} weekly_stats rows rebuilt from daily_stats")
+    print(f"  ✓ {updated} weekly_stats rows updated (only mission weeks)")
 
 
 def main():
@@ -206,7 +224,7 @@ def main():
     conn = get_connection()
     try:
         write_to_daily_stats(missions, conn)
-        rebuild_weekly_stats(conn)
+        update_weekly_stats_for_missions(missions, conn)
     finally:
         conn.close()
 
