@@ -1,28 +1,26 @@
 """
-Mission Registry → DB pipeline.
+Mission Registry → DB pipeline v4.0
 
-Reads stats from MISSION_REGISTRY.json (the source of truth) and writes
-them into the same DB tables that EGI-STAT frontend already reads:
-daily_stats, weekly_stats, mission_stats.
+Reads stats from MISSION_REGISTRY.json and writes them into the SAME
+tables the frontend already reads: daily_stats and weekly_stats.
+No separate tables. No parallel system.
 
-Existing data from commits stays. Where a mission overlaps with an
-existing day+repo row, the mission data overwrites it (more precise).
+For each mission: upsert into daily_stats (date + repo) and
+recalculate weekly_stats for affected weeks.
 
 @author Padmin D. Curtis (AI Partner OS3.0) for Fabio Cherici
-@version 3.0.0 (FlorenceEGI — EGI-STAT)
-@date 2026-04-08
-@purpose Registry JSON → DB. That's it.
+@version 4.0.0 (FlorenceEGI — EGI-STAT)
+@date 2026-04-09
+@purpose Write mission stats into daily_stats and weekly_stats. Period.
 """
 
 import json
 import os
-import sys
-import argparse
 import math
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 import psycopg2
-from psycopg2.extras import Json
+from psycopg2.extras import Json, RealDictCursor
 import dotenv
 from pathlib import Path
 
@@ -40,7 +38,7 @@ REGISTRY_PATH = os.getenv(
     "/home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json"
 )
 
-# Organ name → repo_name as it appears in stat.daily_stats / stat.commits
+# Organ → repo_name as stored in daily_stats/weekly_stats
 ORGAN_TO_REPO = {
     "EGI": "florenceegi/EGI",
     "EGI-HUB": "florenceegi/EGI-HUB",
@@ -53,6 +51,15 @@ ORGAN_TO_REPO = {
     "EGI-STAT": "florenceegi/EGI-STAT",
 }
 
+MISSION_TYPE_TO_DAY_TYPE = {
+    "feature": ("FEATURE_DEV", "✨", 1.0),
+    "bugfix": ("BUG_FIXING", "🐞", 1.3),
+    "refactor": ("REFACTORING", "🛠️", 1.5),
+    "docsync": ("DOCS", "📝", 0.8),
+    "audit": ("MIXED", "📦", 1.1),
+    "lso-evolution": ("REFACTORING", "🛠️", 1.5),
+}
+
 
 def get_connection():
     return psycopg2.connect(
@@ -62,153 +69,130 @@ def get_connection():
 
 
 def load_missions():
-    """Load completed missions with stats from MISSION_REGISTRY.json."""
     with open(REGISTRY_PATH) as f:
         registry = json.load(f)
-
     missions = []
     for m in registry.get("missions", []):
         if m.get("stato") != "completed":
             continue
         if not m.get("stats"):
             continue
-        if not m.get("data_apertura") or not m.get("data_chiusura") or m["data_chiusura"] == "pending":
+        if not m.get("data_chiusura") or m["data_chiusura"] == "pending":
             continue
         missions.append(m)
-
     return missions
 
 
-def write_mission_stats(missions, conn):
-    """Write each mission's stats into stat.mission_stats."""
+def write_to_daily_stats(missions, conn):
+    """Write mission stats into daily_stats — the table the frontend reads."""
     cur = conn.cursor()
+    upserted = 0
 
     for m in missions:
         s = m["stats"]
-        organs = m.get("organi_coinvolti", [])
-        repos = [ORGAN_TO_REPO[o] for o in organs if o in ORGAN_TO_REPO]
-
-        cur.execute(f"""
-            INSERT INTO {DB_SCHEMA}.mission_stats
-                (mission_id, title, date_opened, date_closed, status,
-                 mission_type, organs, repos, cross_organ,
-                 files_modified, files_count, files_created,
-                 doc_sync_executed, doc_verified, duration_days, type_weight,
-                 total_commits, weighted_commits, lines_added, lines_deleted,
-                 lines_net, lines_touched, cognitive_load, productivity_index,
-                 day_type, tags_breakdown)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            ON CONFLICT (mission_id) DO UPDATE SET
-                title=EXCLUDED.title, date_closed=EXCLUDED.date_closed,
-                status=EXCLUDED.status, mission_type=EXCLUDED.mission_type,
-                organs=EXCLUDED.organs, repos=EXCLUDED.repos,
-                cross_organ=EXCLUDED.cross_organ, files_modified=EXCLUDED.files_modified,
-                files_count=EXCLUDED.files_count, doc_sync_executed=EXCLUDED.doc_sync_executed,
-                total_commits=EXCLUDED.total_commits, weighted_commits=EXCLUDED.weighted_commits,
-                lines_added=EXCLUDED.lines_added, lines_deleted=EXCLUDED.lines_deleted,
-                lines_net=EXCLUDED.lines_net, lines_touched=EXCLUDED.lines_touched,
-                cognitive_load=EXCLUDED.cognitive_load, productivity_index=EXCLUDED.productivity_index,
-                day_type=EXCLUDED.day_type, tags_breakdown=EXCLUDED.tags_breakdown,
-                ingested_at=CURRENT_TIMESTAMP
-        """, (
-            m["mission_id"], m.get("titolo", ""), m["data_apertura"], m["data_chiusura"],
-            m.get("stato"), m.get("tipo_missione"), Json(organs), Json(repos),
-            m.get("cross_organo", False), Json(m.get("files_modified", [])),
-            s.get("files_touched", 0), m.get("files_created", 0),
-            m.get("doc_sync_executed", False), m.get("doc_verified", False),
-            max(1, (datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d") -
-                     datetime.strptime(m["data_apertura"][:10], "%Y-%m-%d")).days + 1),
-            1.0,
-            s["total_commits"], s["weighted_commits"], s["lines_added"], s["lines_deleted"],
-            s["lines_net"], s["lines_touched"], s["cognitive_load"], s["productivity_index"],
-            s.get("day_type", "MIXED"), Json(s.get("tags_breakdown", {}))
-        ))
-
-        print(f"  {m['mission_id']} | {s['total_commits']:3d} commits | "
-              f"+{s['lines_added']:5d} -{s['lines_deleted']:5d} = {s['lines_net']:+6d} net | "
-              f"{s['files_touched']:3d} files | PI:{s['productivity_index']:7.2f}")
-
-    conn.commit()
-    print(f"\n  ✓ {len(missions)} missions → mission_stats")
-
-
-def enrich_daily_stats(missions, conn):
-    """Overwrite daily_stats where a mission overlaps with existing rows."""
-    cur = conn.cursor()
-    updated = 0
-
-    for m in missions:
-        s = m["stats"]
-        if s["total_commits"] == 0:
+        if s["total_commits"] == 0 and s["lines_added"] == 0:
             continue
 
-        date_opened = datetime.strptime(m["data_apertura"][:10], "%Y-%m-%d").date()
-        date_closed = datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d").date()
         organs = m.get("organi_coinvolti", [])
         repos = [ORGAN_TO_REPO[o] for o in organs if o in ORGAN_TO_REPO]
+        if not repos:
+            repos = ["florenceegi/EGI-DOC"]  # fallback for ecosystem/doc missions
 
-        mission_ids = [m["mission_id"]]
-        mission_types = [m.get("tipo_missione", "feature")]
-        is_cross = m.get("cross_organo", False)
+        date_closed = m["data_chiusura"][:10]
+        mission_type = m.get("tipo_missione", "feature")
+        day_type, day_icon, _ = MISSION_TYPE_TO_DAY_TYPE.get(mission_type, ("MIXED", "📦", 1.0))
 
-        # For each day in the mission range, update matching daily_stats rows
-        d = date_opened
-        while d <= date_closed:
-            for repo in repos:
-                cur.execute(f"""
-                    UPDATE {DB_SCHEMA}.daily_stats
-                    SET mission_ids = %s,
-                        mission_types = %s,
-                        mission_count = COALESCE(mission_count, 0) + 1,
-                        doc_sync_count = CASE WHEN %s THEN COALESCE(doc_sync_count, 0) + 1 ELSE COALESCE(doc_sync_count, 0) END,
-                        cross_organ = %s
-                    WHERE date = %s AND repo_name = %s
-                      AND (mission_ids IS NULL OR NOT mission_ids @> %s::jsonb)
-                """, (
-                    Json(mission_ids), Json(mission_types),
-                    m.get("doc_sync_executed", False), is_cross,
-                    d, repo, Json(mission_ids)
-                ))
-                updated += cur.rowcount
-            d += timedelta(days=1)
+        # Distribute stats across repos proportionally
+        # If mission touches 1 repo, all stats go there
+        # If multiple repos, split evenly (approximation)
+        n_repos = len(repos)
+        for repo in repos:
+            commits = s["total_commits"] // n_repos
+            lines_added = s["lines_added"] // n_repos
+            lines_deleted = s["lines_deleted"] // n_repos
+            lines_net = lines_added - lines_deleted
+            files = s["files_touched"] // n_repos or 1
+
+            # Weighted commits and PI from stats
+            weighted = s["weighted_commits"] / n_repos
+            pi = s["productivity_index"] / n_repos
+            cl = s["cognitive_load"]
+            coding_h = max(0.5, commits * 22 / 60)
+
+            cur.execute(f"""
+                INSERT INTO {DB_SCHEMA}.daily_stats
+                    (date, repo_name, total_commits, weighted_commits,
+                     lines_added, lines_deleted, net_lines,
+                     productivity_score, files_touched,
+                     day_type, day_type_icon, cognitive_load,
+                     coding_hours, testing_hours, tags_breakdown)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (date, repo_name) DO UPDATE SET
+                    total_commits = GREATEST({DB_SCHEMA}.daily_stats.total_commits, EXCLUDED.total_commits),
+                    weighted_commits = GREATEST({DB_SCHEMA}.daily_stats.weighted_commits, EXCLUDED.weighted_commits),
+                    lines_added = GREATEST({DB_SCHEMA}.daily_stats.lines_added, EXCLUDED.lines_added),
+                    lines_deleted = GREATEST({DB_SCHEMA}.daily_stats.lines_deleted, EXCLUDED.lines_deleted),
+                    net_lines = CASE
+                        WHEN EXCLUDED.total_commits > {DB_SCHEMA}.daily_stats.total_commits
+                        THEN EXCLUDED.net_lines
+                        ELSE {DB_SCHEMA}.daily_stats.net_lines END,
+                    productivity_score = GREATEST({DB_SCHEMA}.daily_stats.productivity_score, EXCLUDED.productivity_score),
+                    files_touched = GREATEST({DB_SCHEMA}.daily_stats.files_touched, EXCLUDED.files_touched),
+                    day_type = CASE
+                        WHEN EXCLUDED.total_commits > {DB_SCHEMA}.daily_stats.total_commits
+                        THEN EXCLUDED.day_type
+                        ELSE {DB_SCHEMA}.daily_stats.day_type END,
+                    day_type_icon = CASE
+                        WHEN EXCLUDED.total_commits > {DB_SCHEMA}.daily_stats.total_commits
+                        THEN EXCLUDED.day_type_icon
+                        ELSE {DB_SCHEMA}.daily_stats.day_type_icon END,
+                    cognitive_load = GREATEST({DB_SCHEMA}.daily_stats.cognitive_load, EXCLUDED.cognitive_load),
+                    coding_hours = GREATEST({DB_SCHEMA}.daily_stats.coding_hours, EXCLUDED.coding_hours)
+            """, (
+                date_closed, repo, commits, weighted,
+                lines_added, lines_deleted, lines_net,
+                pi, files, day_type, day_icon, cl,
+                coding_h, coding_h, Json(s.get("tags_breakdown", {}))
+            ))
+            upserted += 1
 
     conn.commit()
-    print(f"  ✓ {updated} daily_stats rows enriched")
+    print(f"  ✓ {upserted} daily_stats rows upserted")
+    return upserted
 
 
-def enrich_weekly_stats(missions, conn):
-    """Update weekly_stats with mission counts."""
+def rebuild_weekly_stats(conn):
+    """Rebuild weekly_stats from daily_stats — ensures consistency."""
     cur = conn.cursor()
-    week_data = defaultdict(lambda: {"count": 0, "types": set(), "sync": 0})
 
-    for m in missions:
-        if m["stats"]["total_commits"] == 0:
-            continue
-        dc = datetime.strptime(m["data_chiusura"][:10], "%Y-%m-%d").date()
-        iso = dc.isocalendar()
-        key = (iso[0], iso[1])
-        week_data[key]["count"] += 1
-        week_data[key]["types"].add(m.get("tipo_missione", "feature"))
-        if m.get("doc_sync_executed"):
-            week_data[key]["sync"] += 1
+    cur.execute(f"""
+        INSERT INTO {DB_SCHEMA}.weekly_stats (year, week, repo_name, productivity_score, metrics)
+        SELECT
+            EXTRACT(ISOYEAR FROM date)::int as year,
+            EXTRACT(WEEK FROM date)::int as week,
+            repo_name,
+            SUM(productivity_score) as productivity_score,
+            jsonb_build_object(
+                'weighted_commits', SUM(weighted_commits),
+                'lines_touched', SUM(lines_added + lines_deleted),
+                'total_commits', SUM(total_commits)
+            ) as metrics
+        FROM {DB_SCHEMA}.daily_stats
+        GROUP BY year, week, repo_name
+        ON CONFLICT (year, week, repo_name) DO UPDATE SET
+            productivity_score = EXCLUDED.productivity_score,
+            metrics = EXCLUDED.metrics
+    """)
 
-    updated = 0
-    for (year, week), wd in week_data.items():
-        rate = wd["sync"] / wd["count"] if wd["count"] > 0 else 0
-        cur.execute(f"""
-            UPDATE {DB_SCHEMA}.weekly_stats
-            SET mission_count = %s, mission_types = %s, doc_sync_rate = %s
-            WHERE year = %s AND week = %s
-        """, (wd["count"], Json(list(wd["types"])), rate, year, week))
-        updated += cur.rowcount
-
+    updated = cur.rowcount
     conn.commit()
-    print(f"  ✓ {updated} weekly_stats rows enriched")
+    print(f"  ✓ {updated} weekly_stats rows rebuilt from daily_stats")
 
 
 def main():
     print(f"{'='*70}")
-    print(f"  Registry → DB Pipeline v3.0 — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  Mission → daily_stats/weekly_stats v4.0")
+    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"  Source: {REGISTRY_PATH}")
     print(f"{'='*70}\n")
 
@@ -221,9 +205,8 @@ def main():
 
     conn = get_connection()
     try:
-        write_mission_stats(missions, conn)
-        enrich_daily_stats(missions, conn)
-        enrich_weekly_stats(missions, conn)
+        write_to_daily_stats(missions, conn)
+        rebuild_weekly_stats(conn)
     finally:
         conn.close()
 
