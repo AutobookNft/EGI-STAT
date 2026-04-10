@@ -195,7 +195,7 @@ def calculate_stats_for_mission(mission):
                 added = int(parts[0]) if parts[0] != "-" else 0
                 deleted = int(parts[1]) if parts[1] != "-" else 0
                 fname = parts[2]
-                if fname and "node_modules" not in fname and "vendor" not in fname and "package-lock" not in fname and not fname.endswith((".json", ".lock")):
+                if fname and "node_modules" not in fname and "vendor" not in fname and "package-lock" not in fname and not fname.endswith((".json", ".lock")) and "ORGAN_INDEX" not in fname:
                     lines_added += added
                     lines_deleted += deleted
                     files_set.add(fname)
