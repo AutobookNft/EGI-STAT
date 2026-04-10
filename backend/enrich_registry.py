@@ -34,6 +34,7 @@ PROJECT_DIRS = {
     "EGI-DOC": "/home/fabio/EGI-DOC",
     "EGI-STAT": "/home/fabio/EGI-STAT",
     "oracode": "/home/fabio/oracode",
+    "YURI-BIAGINI": "/home/fabio/YURI-BIAGINI",
     "ecosistema": None,
 }
 
@@ -156,7 +157,7 @@ def calculate_stats_for_mission(mission):
         for f in files_modified:
             # Strip common prefixes
             clean = f
-            for prefix in ["EGI-DOC/", "EGI-STAT/", "~/.claude/", "oracode/"]:
+            for prefix in ["EGI-DOC/", "EGI-STAT/", "~/.claude/", "oracode/", "YURI-BIAGINI/", "EGI/", "EGI-HUB/", "EGI-Credential/", "EGI-SIGILLO/", "EGI-HUB-HOME-REACT/", "EGI-INFO/", "NATAN_LOC/"]:
                 if clean.startswith(prefix):
                     clean = clean[len(prefix):]
             repo_files.append(clean)
@@ -194,7 +195,7 @@ def calculate_stats_for_mission(mission):
                 added = int(parts[0]) if parts[0] != "-" else 0
                 deleted = int(parts[1]) if parts[1] != "-" else 0
                 fname = parts[2]
-                if fname and "node_modules" not in fname and "vendor" not in fname and "package-lock" not in fname:
+                if fname and "node_modules" not in fname and "vendor" not in fname and "package-lock" not in fname and not fname.endswith((".json", ".lock")):
                     lines_added += added
                     lines_deleted += deleted
                     files_set.add(fname)
