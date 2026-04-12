@@ -589,11 +589,18 @@ def print_terminal_summary(weekly_stats: List[WeekStats], daily_stats: List[DayS
 DEFAULT_CONFIG = {
     'github': {
         'repositories': [
-            'AutobookNft/EGI',
-            'AutobookNft/EGI-HUB',
-            'AutobookNft/EGI-HUB-HOME-REACT',
-            'AutobookNft/EGI-INFO',
-            'AutobookNft/NATAN_LOC',
+            'florenceegi/EGI',
+            'florenceegi/EGI-HUB',
+            'florenceegi/EGI-HUB-HOME-REACT',
+            'florenceegi/EGI-INFO',
+            'florenceegi/EGI-STAT',
+            'florenceegi/NATAN_LOC',
+            'florenceegi/EGI-DOC',
+            'florenceegi/egi-credential',
+            'florenceegi/EGI-SIGILLO',
+            'florenceegi/oracode',
+            'florenceegi/la-bottega',
+            'florenceegi/fabiocherici',
         ]
     },
     'analysis': {

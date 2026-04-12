@@ -50,6 +50,9 @@ ORGAN_TO_REPO = {
     "EGI-DOC": "florenceegi/EGI-DOC",
     "EGI-STAT": "florenceegi/EGI-STAT",
     "oracode": "florenceegi/oracode",
+    "YURI-BIAGINI": "florenceegi/YURI-BIAGINI",
+    "La Bottega": "florenceegi/la-bottega",
+    "FABIO-CHERICI": "florenceegi/fabiocherici",
 }
 
 MISSION_TYPE_TO_DAY_TYPE = {
