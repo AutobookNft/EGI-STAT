@@ -14,10 +14,27 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+
+# Path patterns esclusi dal conteggio righe (file generati, dipendenze, lock)
+NOISE_PATH_PATTERNS = re.compile(
+    r'(^|/)node_modules/'
+    r'|(^|/)vendor/'
+    r'|(^|/)dist/'
+    r'|(^|/)build/'
+    r'|(^|/)\.next/'
+    r'|(^|/)public/build/'
+    r'|(^|/)__pycache__/'
+    r'|package-lock\.json$|yarn\.lock$|composer\.lock$|poetry\.lock$'
+    r'|Pipfile\.lock$|pnpm-lock\.yaml$|\.package-lock\.json$'
+    r'|ORGAN_INDEX\.json$|ORGAN_INDEX_SUMMARY\.md$'
+    r'|MISSION_REGISTRY\.json$',
+    re.IGNORECASE
+)
 from dataclasses import dataclass, asdict
 import hashlib
 
@@ -251,22 +268,24 @@ class GitHubMultiRepoClient:
         This is slow but necessary for accurate line counts.
         """
         try:
-            # Attempt to get stats (triggers extra API call)
-            try:
-                additions = gh_commit.stats.additions if gh_commit.stats else 0
-                deletions = gh_commit.stats.deletions if gh_commit.stats else 0
-            except Exception:
-                # If stats fail (rate limit, etc), use 0
-                additions = 0
-                deletions = 0
-            
-            # Files
+            # Compute additions/deletions per file, escludendo path rumore
+            additions = 0
+            deletions = 0
             files_list = []
             try:
-                # Accessing .files might be safe now if .stats triggered the fetch
-                files_list = [f.filename for f in gh_commit.files]
+                for f in gh_commit.files:
+                    files_list.append(f.filename)
+                    if not NOISE_PATH_PATTERNS.search(f.filename):
+                        additions += f.additions or 0
+                        deletions += f.deletions or 0
             except Exception:
-                pass
+                # Fallback su stats totali se .files non disponibile
+                try:
+                    additions = gh_commit.stats.additions if gh_commit.stats else 0
+                    deletions = gh_commit.stats.deletions if gh_commit.stats else 0
+                except Exception:
+                    additions = 0
+                    deletions = 0
 
             return CommitData(
                 sha=gh_commit.sha,
