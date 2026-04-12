@@ -152,7 +152,7 @@ Altrimenti                                    → P3  REFERENCE
 |---|--------|---------------------|
 | P0-1 | **REGOLA ZERO** | Info mancante → 🛑 CHIEDI. MAI dedurre |
 | P0-2 | **Translation keys** | `__('key')` Atomic. MAI testo hardcoded. MAI `__('k',['p'=>$v])` |
-| P0-4 | **Anti-Method-Invention** | grep verifica esistenza metodo PRIMA di usarlo |
+| P0-4 | **Anti-Method-Invention** | grep + Organ Index verifica esistenza PRIMA di creare |
 | P0-5 | **UEM-First** | Errori → `$errorManager->handle()`, mai solo log |
 | P0-6 | **Anti-Service-Method** | `Read` + `grep` prima di qualsiasi service call |
 | P0-7 | **Anti-Enum-Constant** | Verifica costanti enum esistano con grep |
@@ -160,6 +160,7 @@ Altrimenti                                    → P3  REFERENCE
 | P0-9 | **i18n 6 lingue** | `it` `en` `de` `es` `fr` `pt` — SEMPRE tutte e sei |
 | P0-11 | **DOC-SYNC** | Task NON chiusa senza EGI-DOC aggiornato. Zero eccezioni |
 | P0-12 | **Anti-Infra-Invention** | URL/path EC2/branch → verifica da SSM/git. MAI dedurre |
+| P0-13 | **Organ Index** | Prima di creare Service/Controller/classe → `python3 -m organ_index --search "Nome"` |
 
 ### P0-8 — Complete Flow Analysis (4 Fasi Obbligatorie)
 
@@ -230,11 +231,14 @@ SSOT: /home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json
 Report: /home/fabio/EGI-DOC/docs/missions/M-NNN_TITOLO.md
 
 Ad ogni /mission:
-  1. LEGGI MISSION_REGISTRY.json → prendi counter attuale
-  2. INCREMENTA counter → nuova mission = M-{counter+1:03d}
-  3. AGGIUNGI entry nel JSON (status: in_progress)
-  4. A fine mission: aggiorna status → completed, scrivi report M-NNN_TITOLO.md
-  5. COMMIT registry + report
+  1. FASE 0: LEGGI counter → INCREMENTA → AGGIUNGI entry con SOLO "mission_id"
+     Commit+push SUBITO (prenotazione anti-collisione)
+  2. FASE 1: Raccogli requisiti → COMPILA entry: titolo, tipo_missione,
+     organi_coinvolti, data_apertura, stato "in_progress", cross_organo
+     Commit+push (registry ora informativo)
+  3. FASI 2-5: Analisi, piano, esecuzione, chiusura operativa
+  4. FASE 6: COMPILA data_chiusura, stato, report_tecnico, report_esteso
+     DOC-SYNC + commit+push registry + report
 
 ID format: M-001, M-002, ... M-NNN
 ```
@@ -280,6 +284,7 @@ Se un file untracked blocca il pull: `rm path/al/file-problematico` poi `git pul
 1. Ho TUTTE le info necessarie?           NO  → 🛑 CHIEDI (P0-1)
 2. Metodi/componenti verificati con grep? NO  → 🛑 grep prima (P0-4/P0-6)
 3. Esiste pattern simile nel codebase?    ?   → 🛑 CERCA prima
+3b. Organ Index consultato per duplicati? NO  → 🛑 organ_index --search (P0-13)
 4. Sto assumendo qualcosa?                SÌ  → 🛑 DICHIARA e CHIEDI
 5. Sto toccando file [LEGACY/OVERSIZED]?  SÌ  → 🛑 DICHIARA + piano Fabio
 6. i18n in tutte le lingue richieste?     NO  → 🛑 NON PROCEDERE (P0-9)
@@ -309,7 +314,31 @@ Decisioni su: Interface stabili · valori immutabili · Strategia Delta · refac
 | `laravel-specialist` | Controllers, Services, Models, Migrations, Routes, Lang (PHP) |
 | `python-rag-specialist` | FastAPI, RAG-Fortress, USE Pipeline, PostgresService |
 | `frontend-ts-specialist` | React/TSX, Vanilla TS, Vite, Tailwind, componenti UI |
+| `node-ts-specialist` | Microservizi Node.js/TS: vc-engine, algokit-service, Express, SD-JWT, OID4VCI/VP, Redis |
 | `doc-sync-guardian` | DOC-SYNC P0-11 — dopo ogni task Tipo 2+ |
+| `oracode-specialist` | Esperto Oracode/LSO: pilastri, P0, hook, agenti, audit, mission, sistema nervoso. Solo consulenza, mai codice |
+| `corporate-finance-specialist` | CFO/Advisor digitale: documenti per banche, investitori, commercialisti, avvocati. Consulenza fundraising e M&A al CEO |
+
+---
+
+## 🗂️ Organ Index — Catalogo Vivente (P0-13)
+
+```
+Prima di creare un nuovo Service, Controller, classe, interfaccia o funzione esportata:
+
+  cd /home/fabio/oracode/bin && python3 -m organ_index --search "NomeProposto"
+
+Se esiste già in un altro organo → RIUSARE, non duplicare.
+Se il nome è già usato con significato diverso → RINOMINARE per evitare ambiguità.
+
+Rigenerazione indice (dopo modifiche significative):
+  cd /home/fabio/oracode/bin && python3 -m organ_index
+
+Output:
+  EGI-DOC/docs/ecosistema/ORGAN_INDEX.json         ← searchable
+  EGI-DOC/docs/ecosistema/ORGAN_INDEX_SUMMARY.md   ← leggibile
+  Naming Standard: EGI-DOC/docs/oracode/NAMING_STANDARD_CODE.md
+```
 
 ---
 
@@ -323,6 +352,8 @@ Decisioni su: Interface stabili · valori immutabili · Strategia Delta · refac
 | Report | `EGI-DOC/docs/oracode/audit/reports/` |
 | AWS Infrastructure | `EGI-DOC/docs/egi-hub/AWS_INFRASTRUCTURE.md` |
 | Naming Conventions | `EGI-DOC/docs/ecosistema/NAMING_CONVENTIONS.md` |
+| Naming Standard Code | `EGI-DOC/docs/oracode/NAMING_STANDARD_CODE.md` |
+| Organ Index | `EGI-DOC/docs/ecosistema/ORGAN_INDEX.json` |
 
 ---
 
