@@ -87,6 +87,7 @@ def ingest_data(days_back=30, target_repo=None):
         "florenceegi/EGI-SIGILLO",
         "florenceegi/oracode",
         "florenceegi/la-bottega",
+        "florenceegi/fabiocherici",
     ]
     
     if target_repo:

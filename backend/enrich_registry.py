@@ -36,6 +36,7 @@ PROJECT_DIRS = {
     "oracode": "/home/fabio/oracode",
     "YURI-BIAGINI": "/home/fabio/YURI-BIAGINI",
     "LA-BOTTEGA": "/home/fabio/LA-BOTTEGA",
+    "FABIO-CHERICI": "/home/fabio/FABIO-CHERICI-SITE",
     "ecosistema": None,
 }
 
