@@ -35,6 +35,7 @@ PROJECT_DIRS = {
     "EGI-STAT": "/home/fabio/EGI-STAT",
     "oracode": "/home/fabio/oracode",
     "YURI-BIAGINI": "/home/fabio/YURI-BIAGINI",
+    "LA-BOTTEGA": "/home/fabio/LA-BOTTEGA",
     "ecosistema": None,
 }
 
