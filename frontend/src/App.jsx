@@ -23,8 +23,8 @@ function App() {
           if (data && data.length > 0) {
             const chartData = data.map(row => ({
               name: `W${row.week}-${row.year}`,
-              pi: row.productivity_score,
-              weighted: row.metrics?.weighted_commits || 0,
+              pi: Math.round(row.productivity_score * 10) / 10,
+              weighted: Math.round((row.metrics?.weighted_commits || 0) * 10) / 10,
               lines: row.metrics?.lines_touched || 0,
               total: row.metrics?.total_commits || 0
             }));
