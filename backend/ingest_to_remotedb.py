@@ -88,6 +88,10 @@ def ingest_data(days_back=30, target_repo=None):
         "florenceegi/oracode",
         "florenceegi/la-bottega",
         "florenceegi/fabiocherici",
+        "florenceegi/YURI-BIAGINI",
+        "florenceegi/creator-staging",
+        "florenceegi/gialloro-firenze",
+        "florenceegi/gialloro-firenze-cms",
     ]
     
     if target_repo:
