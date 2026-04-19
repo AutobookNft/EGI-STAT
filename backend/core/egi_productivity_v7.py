@@ -601,6 +601,10 @@ DEFAULT_CONFIG = {
             'florenceegi/oracode',
             'florenceegi/la-bottega',
             'florenceegi/fabiocherici',
+            'florenceegi/YURI-BIAGINI',
+            'florenceegi/creator-staging',
+            'florenceegi/gialloro-firenze',
+            'florenceegi/gialloro-firenze-cms',
         ]
     },
     'analysis': {
