@@ -149,8 +149,6 @@ Il report esteso DEVE includere:
 - `doc_verified_date`: sempre `null` alla chiusura
 - `files_modified`: lista ESPLICITA di tutti i file di codebase creati o modificati (path relativi al repo)
 
-Incrementare il `counter` nel registry.
-
 ### 6c. Calcolare e scrivere le stats della missione
 
 ```bash
