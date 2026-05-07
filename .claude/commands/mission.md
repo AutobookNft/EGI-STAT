@@ -32,9 +32,11 @@ Quando ricevi questo comando, applica il seguente protocollo prima di fare quals
 
 PRIMA di qualsiasi altra azione:
 1. Leggi `/home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json`
-2. Prendi il `counter` corrente come nuovo Mission ID: `M-{counter:03d}`
-3. Comunica: "Missione **M-XXX** aperta"
-4. NON incrementare il counter ancora — lo farai alla chiusura
+2. `counter` = ultimo ID usato. Nuovo Mission ID = `M-{counter+1:03d}`
+3. Verifica che `M-{counter+1}` NON esista già nell'array `missions` (se esiste → cerca primo ID libero)
+4. Incrementa `counter` nel JSON al nuovo valore e aggiungi entry `{"mission_id": "M-XXX"}` (prenotazione anti-collisione)
+5. Commit+push SUBITO (prenotazione)
+6. Comunica: "Missione **M-XXX** aperta"
 
 ## Fase 1 — Raccolta requisiti
 
