@@ -1,26 +1,28 @@
 """
 Enrich MISSION_REGISTRY.json with real git statistics for each closed mission.
 
+Attribution method (v3.0.0): grep-by-mission-ID.
+  git log --all --extended-regexp --grep="M-{NNN}([^0-9]|$)"
+Deterministic: only commits whose message contains the mission ID are counted.
+No dependency on date ranges or files_modified.
+
 Two-level output:
   - aggregate totals (total_commits, lines_added, ...) for mission display
   - by_repo_day breakdown: one entry per (github_repo, commit_date) with
-    the exact counts from `git log`. That breakdown is the source of truth
-    ingest_missions.py writes 1:1 into daily_stats — no split, no GREATEST.
-
-Raw git numbers — no file-type filter. If git reports 3562 lines added on
-a given day/repo, we store 3562.
+    the exact counts from `git log`.
 
 @author Padmin D. Curtis (AI Partner OS3.0) for Fabio Cherici
-@version 2.0.0 (FlorenceEGI — EGI-STAT)
-@date 2026-04-19
-@purpose Write real per-(repo,day) stats into MISSION_REGISTRY.json
+@version 3.0.0 (FlorenceEGI — EGI-STAT)
+@date 2026-05-08
+@purpose Write real per-(repo,day) stats into MISSION_REGISTRY.json — grep-by-ID attribution
 """
 
 import json
 import math
+import re
 import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 REGISTRY_PATH = Path("/home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json")
@@ -54,17 +56,16 @@ TAG_WEIGHTS = {
     "FEAT": 1.0, "FIX": 1.5, "REFACTOR": 2.0, "TEST": 1.2, "DEBUG": 1.3,
     "DOC": 0.8, "CONFIG": 0.7, "CHORE": 0.6, "I18N": 0.7, "PERF": 1.4,
     "SECURITY": 1.8, "WIP": 0.3, "REVERT": 0.5, "MERGE": 0.4, "DEPLOY": 0.8,
-    "UPDATE": 0.6, "UNTAGGED": 0.5, "ARCH": 1.6, "DEBITO": 0.7,
+    "UPDATE": 0.6, "UNTAGGED": 0.5, "ARCH": 1.6, "DEBITO": 0.7, "MISSION": 1.2,
 }
 
 MISSION_TYPE_MULTIPLIER = {
     "feature": 1.0, "bugfix": 1.3, "refactor": 1.5,
-    "docsync": 0.8, "audit": 1.1, "lso-evolution": 1.5,
+    "docsync": 0.8, "audit": 1.1, "lso-evolution": 1.5, "strutturale": 1.3,
 }
 
 
 def parse_tag(message):
-    import re
     m = re.match(r'^\[([A-Z_-]+)\]', message)
     if m:
         return m.group(1)
@@ -77,29 +78,25 @@ def parse_tag(message):
     return "UNTAGGED"
 
 
-def _git_log(repo_dir, since, until, files=None):
-    """Run git log --numstat with date in format. 1-day buffer on both sides
-    to absorb timezone drift. Searches all branches."""
-    try:
-        d_since = datetime.strptime(since[:10], "%Y-%m-%d") - timedelta(days=1)
-        d_until = datetime.strptime(until[:10], "%Y-%m-%d") + timedelta(days=1)
-        since_str = d_since.strftime("%Y-%m-%d")
-        until_str = d_until.strftime("%Y-%m-%d 23:59:59")
-    except Exception:
-        since_str, until_str = since, f"{until} 23:59:59"
+def _mission_grep_pattern(mission_id):
+    """Build regex pattern for git --grep that matches this mission ID precisely."""
+    suffix = mission_id.split("-", 1)[-1] if "-" in mission_id else mission_id
+    has_letter = any(c.isalpha() for c in suffix)
+    if has_letter:
+        return f"{mission_id}([^0-9a-zA-Z]|$)"
+    return f"{mission_id}([^0-9]|$)"
 
+
+def _git_log_by_mission_id(repo_dir, mission_id):
+    """Attribution by grep: only commits whose message contains the mission ID."""
+    pattern = _mission_grep_pattern(mission_id)
     cmd = [
         "git", "-C", repo_dir, "log", "--all",
-        f"--since={since_str}", f"--until={until_str}",
+        "--extended-regexp", f"--grep={pattern}",
         "--pretty=format:COMMIT|%H|%ad|%s",
         "--date=short",
         "--numstat",
     ]
-    if files:
-        clean = [f for f in files if "*" not in f and "~" not in f]
-        if not clean:
-            return ""
-        cmd += ["--"] + clean
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         return result.stdout.strip()
@@ -107,15 +104,10 @@ def _git_log(repo_dir, since, until, files=None):
         return ""
 
 
-def _collect_repo_stats(repo_dir, github_name, since, until, files):
-    """Scan one repo and return a list of per-day entries plus the raw hash set.
-
-    entries: dict keyed by (github_name, date_str)
-        → {"commits": set(hashes), "added": int, "deleted": int,
-           "files": set(filenames), "tags": {tag: count}}
-    """
+def _collect_repo_stats(repo_dir, github_name, mission_id):
+    """Scan one repo via grep-by-mission-ID. Returns per-day entries dict."""
     by_day = {}
-    log_output = _git_log(repo_dir, since, until, files)
+    log_output = _git_log_by_mission_id(repo_dir, mission_id)
     if not log_output:
         return by_day
 
@@ -141,7 +133,6 @@ def _collect_repo_stats(repo_dir, github_name, since, until, files):
                     slot["tags"][tag] = slot["tags"].get(tag, 0) + 1
             continue
 
-        # numstat line: "added\tdeleted\tfilename"
         parts = line.split("\t")
         if len(parts) >= 3 and current_hash and current_date:
             added = int(parts[0]) if parts[0].isdigit() else 0
@@ -180,15 +171,16 @@ def _mission_target_repos(mission):
 
 
 def calculate_stats_for_mission(mission):
-    """Produce aggregate + by_repo_day breakdown using raw git numbers."""
-    date_opened = mission.get("data_apertura")
-    date_closed = mission.get("data_chiusura")
-    files_modified = mission.get("files_modified", []) or []
+    """Produce aggregate + by_repo_day breakdown via grep-by-mission-ID."""
+    mission_id = mission.get("mission_id")
+    if not mission_id:
+        return None
 
-    if not date_opened or not date_closed or date_closed == "pending":
+    if mission.get("data_chiusura") in (None, "pending"):
         return None
 
     targets = _mission_target_repos(mission)
+    files_modified = mission.get("files_modified") or []
     if not targets:
         return {
             "total_commits": 0, "lines_added": 0, "lines_deleted": 0,
@@ -200,23 +192,7 @@ def calculate_stats_for_mission(mission):
 
     merged = {}
     for local_dir, github_name in targets:
-        repo_files = None
-        if files_modified:
-            cleaned = []
-            for f in files_modified:
-                c = f
-                for prefix in [
-                    "EGI-DOC/", "EGI-STAT/", "~/.claude/", "oracode/",
-                    "YURI-BIAGINI/", "EGI/", "EGI-HUB/", "EGI-Credential/",
-                    "EGI-SIGILLO/", "EGI-HUB-HOME-REACT/", "EGI-INFO/",
-                    "NATAN_LOC/", "GIALLORO-FIRENZE/", "GIALLORO-FIRENZE-CMS/",
-                    "CREATOR-STAGING/", "LA-BOTTEGA/", "FABIO-CHERICI-SITE/",
-                ]:
-                    if c.startswith(prefix):
-                        c = c[len(prefix):]
-                cleaned.append(c)
-            repo_files = cleaned
-        by_day = _collect_repo_stats(local_dir, github_name, date_opened, date_closed, repo_files)
+        by_day = _collect_repo_stats(local_dir, github_name, mission_id)
         for key, slot in by_day.items():
             dst = merged.setdefault(key, {
                 "commits": set(), "added": 0, "deleted": 0,
@@ -229,7 +205,6 @@ def calculate_stats_for_mission(mission):
             for tag, count in slot["tags"].items():
                 dst["tags"][tag] = dst["tags"].get(tag, 0) + count
 
-    # Build by_repo_day list + aggregate totals
     by_repo_day = []
     all_hashes = set()
     agg_added = agg_deleted = 0
@@ -274,6 +249,9 @@ def calculate_stats_for_mission(mission):
     base = (weighted * 10.0) + (capped / 10.0)
     pi = (base * mt) / cl if cl > 0 else 0
 
+    if total_commits > 50:
+        print(f"  ⚠ {mission_id}: {total_commits} commits — verify attribution")
+
     return {
         "total_commits": total_commits,
         "lines_added": lines_added,
@@ -291,11 +269,15 @@ def calculate_stats_for_mission(mission):
     }
 
 
+PRESERVED_FIELDS = {"report_tecnico", "report_esteso", "doc_sync_log", "doc_sync_executed"}
+
+
 def main():
     force = "--force" in sys.argv
 
     print(f"{'='*70}")
-    print(f"  Mission Registry Stats Enrichment — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  Mission Registry Stats Enrichment v3.0.0 (grep-by-ID)")
+    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"{'='*70}")
 
     registry = json.loads(REGISTRY_PATH.read_text())
