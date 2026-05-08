@@ -309,9 +309,106 @@ def rebuild_weekly_stats(conn, affected_weeks):
     return updated
 
 
+MISSION_TYPE_MULTIPLIER = {
+    "feature": 1.0, "bugfix": 1.3, "refactor": 1.5,
+    "docsync": 0.8, "audit": 1.1, "lso-evolution": 1.5, "strutturale": 1.3,
+}
+
+
+def sync_mission_stats(conn, registry_path):
+    """Sync mission_stats table from MISSION_REGISTRY.json stats block."""
+    with open(registry_path) as f:
+        registry = json.load(f)
+
+    cur = conn.cursor()
+    synced = 0
+    for m in registry.get("missions", []):
+        if m.get("stato") != "completed":
+            continue
+        if not m.get("titolo"):
+            continue
+
+        mid = m["mission_id"]
+        stats = m.get("stats") or {}
+        organs = m.get("organi_coinvolti") or []
+        files_mod = m.get("files_modified") or []
+        repos = list({e["repo"] for e in stats.get("by_repo_day", [])})
+        mtype = m.get("tipo_missione", "feature")
+        type_weight = MISSION_TYPE_MULTIPLIER.get(mtype, 1.0)
+
+        d_open = m.get("data_apertura")
+        d_close = m.get("data_chiusura")
+        duration = 1
+        if d_open and d_close and d_close != "pending":
+            try:
+                dt_open = datetime.strptime(d_open[:10], "%Y-%m-%d")
+                dt_close = datetime.strptime(d_close[:10], "%Y-%m-%d")
+                duration = max(1, (dt_close - dt_open).days + 1)
+            except Exception:
+                pass
+
+        cur.execute(f"""
+            INSERT INTO {DB_SCHEMA}.mission_stats
+                (mission_id, title, date_opened, date_closed, status,
+                 mission_type, organs, repos, cross_organ,
+                 files_modified, files_count, files_created,
+                 doc_sync_executed, duration_days, type_weight,
+                 total_commits, weighted_commits,
+                 lines_added, lines_deleted, lines_net, lines_touched,
+                 cognitive_load, productivity_index, tags_breakdown,
+                 ingested_at)
+            VALUES (%s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s,
+                    %s, %s, %s,
+                    %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s,
+                    CURRENT_TIMESTAMP)
+            ON CONFLICT (mission_id) DO UPDATE SET
+                title = EXCLUDED.title,
+                date_opened = EXCLUDED.date_opened,
+                date_closed = EXCLUDED.date_closed,
+                status = EXCLUDED.status,
+                mission_type = EXCLUDED.mission_type,
+                organs = EXCLUDED.organs,
+                repos = EXCLUDED.repos,
+                cross_organ = EXCLUDED.cross_organ,
+                files_modified = EXCLUDED.files_modified,
+                files_count = EXCLUDED.files_count,
+                doc_sync_executed = EXCLUDED.doc_sync_executed,
+                duration_days = EXCLUDED.duration_days,
+                type_weight = EXCLUDED.type_weight,
+                total_commits = EXCLUDED.total_commits,
+                weighted_commits = EXCLUDED.weighted_commits,
+                lines_added = EXCLUDED.lines_added,
+                lines_deleted = EXCLUDED.lines_deleted,
+                lines_net = EXCLUDED.lines_net,
+                lines_touched = EXCLUDED.lines_touched,
+                cognitive_load = EXCLUDED.cognitive_load,
+                productivity_index = EXCLUDED.productivity_index,
+                tags_breakdown = EXCLUDED.tags_breakdown,
+                ingested_at = CURRENT_TIMESTAMP
+        """, (
+            mid, m.get("titolo"), d_open, d_close, m.get("stato"),
+            mtype, Json(organs), Json(repos), m.get("cross_organo", False),
+            Json(files_mod), len(files_mod), 0,
+            m.get("doc_sync_executed", False), duration, type_weight,
+            stats.get("total_commits", 0), stats.get("weighted_commits", 0),
+            stats.get("lines_added", 0), stats.get("lines_deleted", 0),
+            stats.get("lines_net", 0), stats.get("lines_touched", 0),
+            stats.get("cognitive_load", 1.0), stats.get("productivity_index", 0),
+            Json(stats.get("tags_breakdown", {})),
+        ))
+        synced += 1
+
+    conn.commit()
+    return synced
+
+
 def main():
     print(f"{'='*70}")
-    print("  Mission Registry → daily_stats v5.0  (reality-only)")
+    print("  Mission Registry → DB v5.1  (reality-only + mission_stats sync)")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"  Source: {REGISTRY_PATH}")
     print(f"{'='*70}\n")
@@ -356,6 +453,9 @@ def main():
                 affected_weeks.add((iso[0], iso[1]))
         updated = rebuild_weekly_stats(conn, affected_weeks)
         print(f"  ✓ {updated} weekly_stats rows rebuilt")
+
+        synced = sync_mission_stats(conn, REGISTRY_PATH)
+        print(f"  ✓ {synced} mission_stats rows synced from registry")
     finally:
         conn.close()
 
