@@ -8,7 +8,7 @@ FLUSSO per ogni file: SUPERVISOR pianifica → DEV scrive (1 file) → AUDIT val
 
 REGOLE: AUDIT emette sempre PASS / WARN / BLOCK con motivazione e regola OS3 violata. WARN su MiCA-SAFE, valori immutabili o secrets = BLOCK automatico, nessuna eccezione. Loop DEV→AUDIT: max 3 iterazioni, poi ESCALATION a Fabio. Nessuna deduzione senza evidenza — "probabilmente" è vietato senza verifica. No fallback creativi, no naming inventato, no schema DB dedotto.
 
-AUDIT ≠ GATE: AUDIT lavora file per file in sessione, GATE lavora sull'intero diff pre-push. Prima di ogni push: /gate obbligatorio. Dopo ogni task: doc-sync-guardian obbligatorio.
+AUDIT ≠ GATE: AUDIT lavora file per file in sessione, GATE lavora sull'intero diff pre-push. Prima di ogni push: /gate obbligatorio. Dopo ogni task: doc-sync-v2 obbligatorio.
 
 ESCALATION (formato obbligatorio): TASK / FILE / PROBLEMA / REGOLA VIOLATA / COSA MANCA / OPZIONI.
 
@@ -109,7 +109,7 @@ NEXT STEPS:
 - [ ] Commit: [TAG] [descrizione]
 ```
 
-## Fase 6 — Report e Registrazione (OBBLIGATORIA — P0)
+## Fase 6 — Chiusura: DOC-SYNC + retrospective (OBBLIGATORIA — P0)
 
 **La missione NON è chiusa finché questa fase non è completata.**
 
@@ -161,7 +161,28 @@ Questo calcola da git log: commits, lines +/-, net, files, weighted commits, cog
 
 **OBBLIGATORIO** — una missione senza stats è incompleta.
 
-### 6d. Commit e push EGI-DOC
+### 6d. DOC-SYNC v2 — Sincronizzazione SSOT (OBBLIGATORIO — P0-11)
+
+Spawn agent `doc-sync-v2` con:
+- **mission_id**: M-XXX
+- **files_modified**: dal campo `files_modified` del registry (compilato in 6b)
+- **diff**: `git diff <primo_commit_hash>^..<ultimo_commit_hash>` (da `stats.commit_hashes` calcolato in 6c)
+
+Attendi risultato. Scrivi il `doc_sync_log` restituito nel MISSION_REGISTRY campo `doc_sync_log` della mission.
+
+- Se `outcome = "success"` → procedi a 6e
+- Se `outcome = "failed"` → STOP. Dichiara failure, segnala a Fabio
+- Se outcome richiede approvazione → presenta patch, attendi decisione CEO
+
+### 6e. Retrospective bootstrap (OBBLIGATORIO)
+
+```bash
+python3 /home/fabio/oracode/bin/mission_retrospective.py
+```
+
+Il retrospective confronta moduli caricati vs usati e genera proposte di aggiornamento a `MISSION_BOOTSTRAP_INDEX.json` nel `BOOTSTRAP_DRIFT_LOG.md`. Eseguire PRIMA di aggiornare lo stato a `completed` (il comando trova la mission corrente via stato `in_progress`).
+
+### 6f. Commit e push EGI-DOC
 
 ```bash
 git add docs/missions/M-XXX_*.md docs/missions/MISSION_REGISTRY.json
@@ -169,7 +190,7 @@ git commit -m "[DOC] Mission report M-XXX — [titolo breve]"
 git push origin main
 ```
 
-### 6e. LOG SUPERVISOR finale
+### 6g. LOG SUPERVISOR finale
 
 ```
 LOG SUPERVISOR — M-XXX
