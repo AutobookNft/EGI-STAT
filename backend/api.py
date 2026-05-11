@@ -288,6 +288,68 @@ def get_mission_timeline():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/v2/stats/daily', methods=['GET'])
+def get_v2_daily():
+    """Daily stats from MISSION_REGISTRY — v2.0 metrics."""
+    from stats_v2 import aggregate_daily
+    try:
+        data = aggregate_daily()
+        limit = request.args.get('limit', 90, type=int)
+        return jsonify(data[-limit:])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/v2/stats/weekly', methods=['GET'])
+def get_v2_weekly():
+    """Weekly stats from MISSION_REGISTRY — v2.0 metrics."""
+    from stats_v2 import aggregate_daily, aggregate_weekly
+    try:
+        daily = aggregate_daily()
+        data = aggregate_weekly(daily)
+        limit = request.args.get('limit', 50, type=int)
+        return jsonify(data[-limit:])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/v2/stats/monthly', methods=['GET'])
+def get_v2_monthly():
+    """Monthly stats from MISSION_REGISTRY — v2.0 metrics."""
+    from stats_v2 import aggregate_daily, aggregate_monthly
+    try:
+        daily = aggregate_daily()
+        data = aggregate_monthly(daily)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/v2/stats/missions', methods=['GET'])
+def get_v2_missions():
+    """All mission metrics with CL v2.0 + PI v2.0."""
+    from stats_v2 import completed_missions, compute_mission_metrics
+    try:
+        missions = completed_missions()
+        metrics = [compute_mission_metrics(m) for m in missions]
+        tipo = request.args.get('type')
+        if tipo:
+            metrics = [m for m in metrics if m["tipo"] == tipo]
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/v2/stats/summary', methods=['GET'])
+def get_v2_summary():
+    """Overall summary — all-time productivity stats."""
+    from stats_v2 import summary_stats
+    try:
+        return jsonify(summary_stats())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     import json
     app.run(host='0.0.0.0', debug=True, port=5000)
