@@ -209,9 +209,10 @@ def get_mission_stats():
         if where_clauses:
             where_sql = "WHERE " + " AND ".join(where_clauses)
 
-        # Individual missions
+        # Individual missions — `organ` (provenienza/registry) disambigua i
+        # mission_id duplicati cross-organo; distinto da `organs` (organi toccati).
         cur.execute(f"""
-            SELECT mission_id, title, date_opened, date_closed, status,
+            SELECT organ, mission_id, title, date_opened, date_closed, status,
                    mission_type, organs, repos, cross_organ,
                    files_count, files_created, doc_sync_executed,
                    duration_days, type_weight

@@ -1,0 +1,30 @@
+{
+  "mission_id": "M-220",
+  "actions": [
+    {
+      "ssot_path": "README.md",
+      "mode": "additive",
+      "status": "applied",
+      "resolution_method": "auto_additive",
+      "justification": "Aggiunte 2 righe additive: (1) responsabilita backend 'aggregare missioni di tutti gli organi (mission_stats)'; (2) modulo 'Ingestion Missioni (ingest_missions.py)' con riferimento a ecosystem.py, migrate_mission_stats_organ.py e MULTI_REGISTRY.md. Nessuna claim esistente contraddetta -> additive puro, nessuna approvazione richiesta.",
+      "diff_path": "diffs/README.md",
+      "timestamp": "2026-06-01"
+    },
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "mode": "no_change",
+      "status": "no_change",
+      "resolution_method": "already_covered_by_mission",
+      "justification": "Doc tecnica scritta dalla mission stessa. Copre discovery (ecosystem.py), normalizzazione 2-schemi, schema DB/PK (migrate_mission_stats_organ.py), stato/limiti (PI parziale fase-2), test. Verificata coerente col diff del codice. Nessuna modifica necessaria.",
+      "timestamp": "2026-06-01"
+    },
+    {
+      "ssot_path": "CLAUDE.md",
+      "mode": "no_change",
+      "status": "no_change",
+      "resolution_method": "not_impacted",
+      "justification": "Contesto progetto generico (identita, stack, P0 specifici). Nessun riferimento al subsystem mission_stats o ai registry. M-220 non altera nessuna affermazione qui presente.",
+      "timestamp": "2026-06-01"
+    }
+  ]
+}

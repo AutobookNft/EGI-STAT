@@ -1,0 +1,26 @@
+{
+  "mission_id": "M-220",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "rag_mode": "skipped_no_schema",
+  "verification_mode": "registry_only",
+  "new_modules": [
+    {"file": "backend/ecosystem.py", "purpose": "discovery multi-registry (projects.json UNION filesystem walk) + normalize_mission per 2 schemi (legacy-IT + engine-EN) a canonico"},
+    {"file": "backend/migrate_mission_stats_organ.py", "purpose": "migrazione idempotente: aggiunge colonna organ, sposta PK a (organ, mission_id), allarga mission_id/mission_type a text; ensure_schema() callable dall'ingest"}
+  ],
+  "modified_behaviors": [
+    {"file": "backend/ingest_missions.py", "change": "sync_mission_stats ora aggrega TUTTI i registry dell'ecosistema via ecosystem.discover_registries(); ogni riga taggata con organ; ensure_schema auto-migra prima dell'ingest; firma registry_path mantenuta retro-compat ma ignorata"},
+    {"file": "backend/init_remote_db.py", "change": "DDL mission_stats allineato: organ TEXT NOT NULL DEFAULT 'EGI-DOC', mission_id/mission_type TEXT, PRIMARY KEY (organ, mission_id)"},
+    {"file": "backend/api.py", "change": "SELECT delle missioni include organ (disambigua mission_id duplicati cross-organo)"}
+  ],
+  "new_tests": [
+    {"file": "backend/tests/m_220_multiregistry_test.py", "purpose": "oracle indipendente: rilegge registry, conta completed per-organo, asserisce match col DB + colonna/PK organ"}
+  ],
+  "new_docs": [
+    {"file": "backend/MULTI_REGISTRY.md", "status": "gia scritta dalla mission — copre l'intera superficie semantica M-220"}
+  ],
+  "trigger_matrix_type": 3,
+  "trigger_matrix_rationale": "Architetturale: nuovo modulo ecosystem.py, nuovo comportamento di aggregazione cross-organo, cambio schema DB (PK)",
+  "out_of_scope_working_tree_changes": [
+    {"file": "CLAUDE_ECOSYSTEM_CORE.md", "reason": "diff working-tree e una compaction/rewrite generica del core ecosistema, NON contiene contenuto M-220 (nessun riferimento a mission_stats/multi-registry/ecosystem.py). Regola 6 / anti-pattern 9: non toccato."}
+  ]
+}

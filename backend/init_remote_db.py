@@ -98,12 +98,13 @@ def init_db():
         # Table: Mission Stats (from MISSION_REGISTRY.json)
         cur.execute(sql.SQL("""
             CREATE TABLE IF NOT EXISTS {}.mission_stats (
-                mission_id VARCHAR(10) PRIMARY KEY,
+                organ TEXT NOT NULL DEFAULT 'EGI-DOC',
+                mission_id TEXT NOT NULL,
                 title TEXT,
                 date_opened DATE,
                 date_closed DATE,
                 status VARCHAR(20),
-                mission_type VARCHAR(30),
+                mission_type TEXT,
                 organs JSONB DEFAULT '[]'::jsonb,
                 repos JSONB DEFAULT '[]'::jsonb,
                 cross_organ BOOLEAN DEFAULT FALSE,
@@ -124,7 +125,8 @@ def init_db():
                 productivity_index FLOAT DEFAULT 0,
                 day_type VARCHAR(50),
                 tags_breakdown JSONB DEFAULT '{}'::jsonb,
-                ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (organ, mission_id)
             )
         """).format(sql.Identifier(DB_SCHEMA)))
 

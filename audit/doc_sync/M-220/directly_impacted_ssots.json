@@ -1,0 +1,12 @@
+{
+  "mission_id": "M-220",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "ssot_registry_present": false,
+  "note": "SSOT_REGISTRY.json assente in /home/fabio/EGI-STAT/docs/lso/ -> modalita LSO ridotto. Identificazione SSOT fatta per ispezione diretta dei doc di progetto (no watches deterministici disponibili).",
+  "ssot_candidates_inspected": [
+    {"path": "README.md", "verdict": "impacted_additive", "reason": "documenta i moduli backend e le responsabilita; non descriveva il subsystem mission_stats/multi-registry"},
+    {"path": "backend/MULTI_REGISTRY.md", "verdict": "already_covered", "reason": "doc tecnica M-220 gia scritta dalla mission, copre tutta la superficie semantica"},
+    {"path": "CLAUDE.md", "verdict": "no_change", "reason": "contesto progetto generico, nessuna claim sul registry o sull'ingestione missioni"},
+    {"path": "CLAUDE_ECOSYSTEM_CORE.md", "verdict": "out_of_scope", "reason": "modificato nel working-tree da change estranea a M-220 (compaction generica); non parte della mission"}
+  ]
+}

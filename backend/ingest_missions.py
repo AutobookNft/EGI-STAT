@@ -34,6 +34,9 @@ import dotenv
 import psycopg2
 from psycopg2.extras import Json
 
+import ecosystem  # M-220: discovery multi-registry + normalizzazione 2-schemi
+from migrate_mission_stats_organ import ensure_schema  # M-220: auto-migrazione schema
+
 dotenv.load_dotenv(Path(__file__).parent / ".env")
 
 DB_HOST = os.getenv("DB_HOST")
@@ -353,94 +356,100 @@ MISSION_TYPE_MULTIPLIER = {
 }
 
 
-def sync_mission_stats(conn, registry_path):
-    """Sync mission_stats table from MISSION_REGISTRY.json stats block."""
-    with open(registry_path) as f:
-        registry = json.load(f)
+def _upsert_mission_row(cur, organ, nm):
+    """Scrive una riga mission_stats canonica (PK organ, mission_id). nm =
+    output di ecosystem.normalize_mission. Git-stats ricche solo dove l'organo
+    è già enrichato (EGI-DOC); altrove 0 finché non gira l'enrich per-organo."""
+    stats = nm["stats"]
+    repos = list({e["repo"] for e in stats.get("by_repo_day", [])})
+    mtype = nm["mission_type"]
+    type_weight = MISSION_TYPE_MULTIPLIER.get(mtype, 1.0)
+    files_mod = nm["files_modified"]
 
+    d_open, d_close = nm["date_opened"], nm["date_closed"]
+    duration = 1
+    if d_open and d_close and d_close != "pending":
+        try:
+            dt_open = datetime.strptime(d_open[:10], "%Y-%m-%d")
+            dt_close = datetime.strptime(d_close[:10], "%Y-%m-%d")
+            duration = max(1, (dt_close - dt_open).days + 1)
+        except Exception:
+            pass
+
+    cur.execute(f"""
+        INSERT INTO {DB_SCHEMA}.mission_stats
+            (organ, mission_id, title, date_opened, date_closed, status,
+             mission_type, organs, repos, cross_organ,
+             files_modified, files_count, files_created,
+             doc_sync_executed, duration_days, type_weight,
+             total_commits, weighted_commits,
+             lines_added, lines_deleted, lines_net, lines_touched,
+             cognitive_load, productivity_index, tags_breakdown,
+             ingested_at)
+        VALUES (%s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s,
+                %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s,
+                CURRENT_TIMESTAMP)
+        ON CONFLICT (organ, mission_id) DO UPDATE SET
+            title = EXCLUDED.title,
+            date_opened = EXCLUDED.date_opened,
+            date_closed = EXCLUDED.date_closed,
+            status = EXCLUDED.status,
+            mission_type = EXCLUDED.mission_type,
+            organs = EXCLUDED.organs,
+            repos = EXCLUDED.repos,
+            cross_organ = EXCLUDED.cross_organ,
+            files_modified = EXCLUDED.files_modified,
+            files_count = EXCLUDED.files_count,
+            doc_sync_executed = EXCLUDED.doc_sync_executed,
+            duration_days = EXCLUDED.duration_days,
+            type_weight = EXCLUDED.type_weight,
+            total_commits = EXCLUDED.total_commits,
+            weighted_commits = EXCLUDED.weighted_commits,
+            lines_added = EXCLUDED.lines_added,
+            lines_deleted = EXCLUDED.lines_deleted,
+            lines_net = EXCLUDED.lines_net,
+            lines_touched = EXCLUDED.lines_touched,
+            cognitive_load = EXCLUDED.cognitive_load,
+            productivity_index = EXCLUDED.productivity_index,
+            tags_breakdown = EXCLUDED.tags_breakdown,
+            ingested_at = CURRENT_TIMESTAMP
+    """, (
+        organ, nm["id"], nm["title"], d_open, d_close, nm["status"],
+        mtype, Json(nm["organs"]), Json(repos), nm["cross_organ"],
+        Json(files_mod), len(files_mod), 0,
+        nm["doc_sync_executed"], duration, type_weight,
+        stats.get("total_commits", 0), stats.get("weighted_commits", 0),
+        stats.get("lines_added", 0), stats.get("lines_deleted", 0),
+        stats.get("lines_net", 0), stats.get("lines_touched", 0),
+        stats.get("cognitive_load", 1.0), stats.get("productivity_index", 0),
+        Json(stats.get("tags_breakdown", {})),
+    ))
+
+
+def sync_mission_stats(conn, registry_path=None):
+    """M-220: sync mission_stats da TUTTI i registry dell'ecosistema (non solo
+    EGI-DOC). Ogni riga taggata con l'organo. Normalizza i 2 schemi coesistenti.
+    registry_path è ignorato (retro-compat firma); la sorgente è la discovery."""
     cur = conn.cursor()
     synced = 0
-    for m in registry.get("missions", []):
-        if m.get("stato") != "completed":
-            continue
-        if not m.get("titolo"):
-            continue
-
-        mid = m["mission_id"]
-        stats = m.get("stats") or {}
-        organs = m.get("organi_coinvolti") or []
-        files_mod = m.get("files_modified") or []
-        repos = list({e["repo"] for e in stats.get("by_repo_day", [])})
-        mtype = m.get("tipo_missione", "feature")
-        type_weight = MISSION_TYPE_MULTIPLIER.get(mtype, 1.0)
-
-        d_open = m.get("data_apertura")
-        d_close = m.get("data_chiusura")
-        duration = 1
-        if d_open and d_close and d_close != "pending":
-            try:
-                dt_open = datetime.strptime(d_open[:10], "%Y-%m-%d")
-                dt_close = datetime.strptime(d_close[:10], "%Y-%m-%d")
-                duration = max(1, (dt_close - dt_open).days + 1)
-            except Exception:
-                pass
-
-        cur.execute(f"""
-            INSERT INTO {DB_SCHEMA}.mission_stats
-                (mission_id, title, date_opened, date_closed, status,
-                 mission_type, organs, repos, cross_organ,
-                 files_modified, files_count, files_created,
-                 doc_sync_executed, duration_days, type_weight,
-                 total_commits, weighted_commits,
-                 lines_added, lines_deleted, lines_net, lines_touched,
-                 cognitive_load, productivity_index, tags_breakdown,
-                 ingested_at)
-            VALUES (%s, %s, %s, %s, %s,
-                    %s, %s, %s, %s,
-                    %s, %s, %s,
-                    %s, %s, %s,
-                    %s, %s,
-                    %s, %s, %s, %s,
-                    %s, %s, %s,
-                    CURRENT_TIMESTAMP)
-            ON CONFLICT (mission_id) DO UPDATE SET
-                title = EXCLUDED.title,
-                date_opened = EXCLUDED.date_opened,
-                date_closed = EXCLUDED.date_closed,
-                status = EXCLUDED.status,
-                mission_type = EXCLUDED.mission_type,
-                organs = EXCLUDED.organs,
-                repos = EXCLUDED.repos,
-                cross_organ = EXCLUDED.cross_organ,
-                files_modified = EXCLUDED.files_modified,
-                files_count = EXCLUDED.files_count,
-                doc_sync_executed = EXCLUDED.doc_sync_executed,
-                duration_days = EXCLUDED.duration_days,
-                type_weight = EXCLUDED.type_weight,
-                total_commits = EXCLUDED.total_commits,
-                weighted_commits = EXCLUDED.weighted_commits,
-                lines_added = EXCLUDED.lines_added,
-                lines_deleted = EXCLUDED.lines_deleted,
-                lines_net = EXCLUDED.lines_net,
-                lines_touched = EXCLUDED.lines_touched,
-                cognitive_load = EXCLUDED.cognitive_load,
-                productivity_index = EXCLUDED.productivity_index,
-                tags_breakdown = EXCLUDED.tags_breakdown,
-                ingested_at = CURRENT_TIMESTAMP
-        """, (
-            mid, m.get("titolo"), d_open, d_close, m.get("stato"),
-            mtype, Json(organs), Json(repos), m.get("cross_organo", False),
-            Json(files_mod), len(files_mod), 0,
-            m.get("doc_sync_executed", False), duration, type_weight,
-            stats.get("total_commits", 0), stats.get("weighted_commits", 0),
-            stats.get("lines_added", 0), stats.get("lines_deleted", 0),
-            stats.get("lines_net", 0), stats.get("lines_touched", 0),
-            stats.get("cognitive_load", 1.0), stats.get("productivity_index", 0),
-            Json(stats.get("tags_breakdown", {})),
-        ))
-        synced += 1
-
+    per_organ = {}
+    for organ, missions in sorted(ecosystem.discover_registries().items()):
+        n = 0
+        for m in missions:
+            nm = ecosystem.normalize_mission(m)
+            if nm is None:
+                continue
+            _upsert_mission_row(cur, organ, nm)
+            n += 1
+        per_organ[organ] = n
+        synced += n
     conn.commit()
+    sync_mission_stats.last_per_organ = per_organ
     return synced
 
 
@@ -481,6 +490,7 @@ def main():
 
     conn = get_connection()
     try:
+        ensure_schema(conn)  # M-220: auto-allinea lo schema (organ + PK) prima dell'ingest
         written = write_daily_stats(conn, cells_by_repo)
         print(f"\n  ✓ {written} daily_stats rows upserted (real git numbers)")
 
@@ -492,8 +502,10 @@ def main():
         updated = rebuild_weekly_stats(conn, affected_weeks)
         print(f"  ✓ {updated} weekly_stats rows rebuilt")
 
-        synced = sync_mission_stats(conn, REGISTRY_PATH)
-        print(f"  ✓ {synced} mission_stats rows synced from registry")
+        synced = sync_mission_stats(conn)
+        print(f"  ✓ {synced} mission_stats rows synced from ALL ecosystem registries")
+        for organ, n in sorted(getattr(sync_mission_stats, "last_per_organ", {}).items()):
+            print(f"       {organ:42s} {n}")
     finally:
         conn.close()
 
