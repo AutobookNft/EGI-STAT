@@ -90,6 +90,13 @@ REPO_TO_DIR = {
     "florenceegi/creator-staging": "/home/fabio/CREATOR-STAGING",
     "florenceegi/gialloro-firenze": "/home/fabio/GIALLORO-FIRENZE",
     "florenceegi/gialloro-firenze-cms": "/home/fabio/GIALLORO-FIRENZE-CMS",
+    # DEBITO M-222: NON aggiungere pinocapasso / le-vespe-cafe / os3-matrix qui.
+    # Questo script ricostruisce daily_stats da git LOCALE; i loro cloni sono
+    # stale (es. 2026-06-01: locale 0 commit vs GitHub 16/37/111) → li
+    # sovrascriverebbe azzerandoli. I loro daily vivono in daily_stats via
+    # ingest_to_remotedb (GitHub). Questi repo sono "GitHub-only-no-local".
+    # Debito strutturale: 3 liste repo (qui + ingest_to_remotedb.all_repos +
+    # ingest_missions.REPO_TO_DIR) andrebbero unificate in repos_config.py.
 }
 
 

@@ -69,6 +69,11 @@ REPO_TO_DIR = {
     "florenceegi/creator-staging":      "/home/fabio/CREATOR-STAGING",
     "florenceegi/gialloro-firenze":     "/home/fabio/GIALLORO-FIRENZE",
     "florenceegi/gialloro-firenze-cms": "/home/fabio/GIALLORO-FIRENZE-CMS",
+    # M-222: pinocapasso/le-vespe-cafe/os3-matrix NON sono qui di proposito.
+    # I loro daily_stats vengono da ingest_to_remotedb (GitHub API, sempre fresco).
+    # Metterli qui attiverebbe l'overwrite git-LOCALE (cloni stale → sottoconta)
+    # alla prima cella by_repo_day di una mission EGI-DOC su quei repo. Sicurezza
+    # Proattiva: non creare il footgun (audit M-222 P2).
 }
 
 CODE_EXT = {

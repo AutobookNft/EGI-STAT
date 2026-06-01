@@ -92,6 +92,12 @@ def ingest_data(days_back=30, target_repo=None):
         "florenceegi/creator-staging",
         "florenceegi/gialloro-firenze",
         "florenceegi/gialloro-firenze-cms",
+        # M-222: repo del CEO prima non tracciati nei grafici giornalieri.
+        # pinocapasso è in un'ALTRA org GitHub (AutobookNft) — il client usa
+        # owner/repo, quindi org-cross funziona col token che ha accesso.
+        "AutobookNft/pinocapasso",
+        "florenceegi/le-vespe-cafe",
+        "florenceegi/os3-matrix",
     ]
     
     if target_repo:

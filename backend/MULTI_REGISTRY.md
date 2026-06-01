@@ -72,6 +72,27 @@ nel body NON viene attribuito (no cross-reference incidentali).
   **sovra-conta** i commit "ponte". Coerente con `enrich_registry.py` (stessa
   convenzione), non una regressione M-221.
 
+## Copertura repo nei grafici giornalieri (M-222)
+I grafici **daily/weekly** (vista per-repo, `daily_stats` ← `ingest_to_remotedb.py`
+da GitHub API) tracciavano solo 15 repo `florenceegi/*`. M-222 ha aggiunto i repo
+del CEO che mancavano: **`AutobookNft/pinocapasso`** (org GitHub diversa),
+**`florenceegi/le-vespe-cafe`**, **`florenceegi/os3-matrix`** — ora i loro commit
+appaiono in `daily_stats` e nella vista `daily_detail`.
+
+**⚠️ Debito "3 liste repo → 1":** la lista repo è duplicata in 3 file con sorgenti
+diverse: `ingest_to_remotedb.all_repos` (GitHub API), `ingest_missions.REPO_TO_DIR`
+e `rebuild_all_daily.REPO_TO_DIR` (git LOCALE). I 3 repo nuovi sono **solo** in
+`ingest_to_remotedb` (GitHub): NON in `rebuild_all_daily`/`ingest_missions` perché
+quei due ricostruiscono da git locale e i cloni sono stale → sovrascriverebbero i
+daily GitHub azzerandoli. Vanno unificate in un `repos_config.py` con un flag
+"GitHub-only-no-local".
+
+**Limite separato (non M-222):** i grafici **v2** della dashboard
+(`/api/v2/stats/*`) sono mission-based: `stats_v2` legge **`MISSION_REGISTRY.json`
+del solo EGI-DOC**, NON la tabella `mission_stats` multi-registry né `daily_stats`.
+Quindi le line-chart principali restano EGI-DOC-only finché stats_v2 non viene
+puntato alla discovery multi-registry (mission futura).
+
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
 conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).
