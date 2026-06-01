@@ -1,0 +1,12 @@
+diff --git a/README.md b/README.md
+index d680544..e4bd214 100644
+--- a/README.md
++++ b/README.md
+@@ -34,6 +34,7 @@ Il progetto è diviso in due componenti principali:
+   - `auto_categorizer.py`: Classifica automaticamente i commit senza tag.
+ - **Ingestion Dati (`ingest_to_remotedb.py`)**: Script per popolare il database con i dati più recenti da GitHub. Viene eseguito periodicamente tramite `daily_ingest.sh`.
+ - **Ingestion Missioni (`ingest_missions.py`)**: Sincronizza la tabella `mission_stats` dai `MISSION_REGISTRY.json` di tutti gli organi. Multi-registry da M-220: la discovery dei registry e la normalizzazione dei due schemi coesistenti (legacy-IT + engine-EN) vivono in `ecosystem.py`; la migrazione idempotente dello schema (`organ` + PK composta) in `migrate_mission_stats_organ.py`. Dettaglio completo in `backend/MULTI_REGISTRY.md`.
++- **Enrich per-organo (`enrich_by_message.py`)**: Da M-221, fallback che enricha le missioni degli organi senza blocco `stats` nel registry (os3-matrix, LeVespe, oracode, …) attribuendo i commit per id-missione cercato nel subject dei commit di tutti i repo dell'ecosistema (cross-repo). Interpellato da `ingest_missions.py` solo dove mancano git-stats ricche. Dettaglio e limiti in `backend/MULTI_REGISTRY.md`.
+ - **Database (`init_remote_db.py`)**: Script per inizializzare lo schema e le tabelle nel database PostgreSQL.
+ 
+ ### Frontend

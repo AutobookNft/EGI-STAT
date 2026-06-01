@@ -1,0 +1,32 @@
+{
+  "mission_id": "M-221",
+  "title": "EGI-STAT enrich per-organo (grep-by-id)",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "doc_sync_version": "2.2.0",
+  "verification_mode": "registry_only",
+  "rag_mode": "skipped_no_schema",
+  "scope_note": "CLAUDE_ECOSYSTEM_CORE.md escluso dallo scope (modifica estranea nota, fuori mission).",
+  "new_functions_classes": [
+    "enrich_by_message.collect_mission_git_stats() -> {mission_id: stats}",
+    "enrich_by_message._build_id_re(known_ids)",
+    "enrich_by_message._git_repos()",
+    "enrich_by_message._known_id_types()",
+    "enrich_by_message._scan_repo(repo, id_re, buckets)"
+  ],
+  "removed_functions": [],
+  "behavior_changes": [
+    "ingest_missions.sync_mission_stats(): lazy-import di enrich_by_message + chiamata a collect_mission_git_stats(); fallback guardato (has_rich) che applica le grep-stats SOLO a missioni senza total_commits e senza by_repo_day. Non sovrascrive mai stats ricche."
+  ],
+  "narrative_content_changes": [],
+  "files": [
+    {"path": "backend/enrich_by_message.py", "type": "created"},
+    {"path": "backend/ingest_missions.py", "type": "modified"},
+    {"path": "backend/tests/m_221_enrich_by_id_test.py", "type": "created"},
+    {"path": "backend/MULTI_REGISTRY.md", "type": "modified", "note": "gia aggiornato a mano dal mission author"}
+  ],
+  "key_concepts": [
+    "enrich-by-message", "subject-only attribution", "cross-repo", "id-missione globalmente unico",
+    "PI fallback", "208/218 reali", "10 residui PI=0", "debito attribuzione subject vs full-message",
+    "commit multi-id over-count"
+  ]
+}

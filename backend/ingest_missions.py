@@ -434,7 +434,12 @@ def _upsert_mission_row(cur, organ, nm):
 def sync_mission_stats(conn, registry_path=None):
     """M-220: sync mission_stats da TUTTI i registry dell'ecosistema (non solo
     EGI-DOC). Ogni riga taggata con l'organo. Normalizza i 2 schemi coesistenti.
+    M-221: per le missioni senza git-stats ricche (PI=0), fallback su
+    enrich-by-message (commit attribuiti per id-missione, cross-repo).
     registry_path è ignorato (retro-compat firma); la sorgente è la discovery."""
+    import enrich_by_message  # lazy: evita import circolare a load
+    grep_stats = enrich_by_message.collect_mission_git_stats()
+
     cur = conn.cursor()
     synced = 0
     per_organ = {}
@@ -444,6 +449,13 @@ def sync_mission_stats(conn, registry_path=None):
             nm = ecosystem.normalize_mission(m)
             if nm is None:
                 continue
+            # fallback M-221: usa grep-by-id SOLO per missioni senza attribuzione
+            # ricca (no commit, no by_repo_day). Guard preciso: non sovrascrive
+            # mai stats ricche con PI non computato (P0 audit M-221).
+            s = nm["stats"]
+            has_rich = (s.get("total_commits", 0) or 0) > 0 or bool(s.get("by_repo_day"))
+            if not has_rich and nm["id"] in grep_stats:
+                nm["stats"] = grep_stats[nm["id"]]
             _upsert_mission_row(cur, organ, nm)
             n += 1
         per_organ[organ] = n

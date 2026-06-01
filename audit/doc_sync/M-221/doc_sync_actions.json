@@ -1,0 +1,35 @@
+{
+  "mission_id": "M-221",
+  "doc_sync_version": "2.2.0",
+  "actions": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "mode": "additive",
+      "status": "applied",
+      "resolution_method": "auto_additive",
+      "justification": "Il corpo del doc era gia aggiornato a mano dal mission author (sezione 'Enrich per-organo' + 'Stato e limiti' con 208/218, 10 residui, subject-only, debito attribuzione, multi-id). Tutte le claim richieste sono coperte. Unico gap: la sezione 'Test' citava solo il test M-220. Aggiunta riga additiva per tests/m_221_enrich_by_id_test.py. Nessuna modifica sostitutiva.",
+      "diff_path": "diffs/MULTI_REGISTRY.md.diff",
+      "timestamp": "2026-06-01T20:11:12Z"
+    },
+    {
+      "ssot_path": "README.md",
+      "mode": "additive",
+      "status": "applied",
+      "resolution_method": "auto_additive",
+      "justification": "README 'Componenti Chiave > Backend' non menzionava l'enrichment degli organi non enrichati. Aggiunta voce additiva per enrich_by_message.py come peer del flusso Ingestion Missioni, con rinvio del dettaglio a MULTI_REGISTRY.md (coerente col pattern esistente). Nessuna riga sostituita.",
+      "diff_path": "diffs/README.md.diff",
+      "timestamp": "2026-06-01T20:11:12Z"
+    }
+  ],
+  "coverage_check": {
+    "new_files_in_mission": [
+      "backend/enrich_by_message.py",
+      "backend/tests/m_221_enrich_by_id_test.py"
+    ],
+    "documented": [
+      "backend/enrich_by_message.py -> README.md + MULTI_REGISTRY.md",
+      "backend/tests/m_221_enrich_by_id_test.py -> MULTI_REGISTRY.md (sezione Test)"
+    ],
+    "uncovered": []
+  }
+}

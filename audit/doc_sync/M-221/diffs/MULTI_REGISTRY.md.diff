@@ -1,0 +1,50 @@
+diff --git a/backend/MULTI_REGISTRY.md b/backend/MULTI_REGISTRY.md
+index 98847b3..839b8c6 100644
+--- a/backend/MULTI_REGISTRY.md
++++ b/backend/MULTI_REGISTRY.md
+@@ -42,15 +42,39 @@ non completate o senza id (saltate).
+   (es. `oracode` M-001 vs `EGI-DOC` M-001) non collidono.
+ - `mission_id` / `mission_type` allargati a `text` (id come `M-094-SUPERVISOR`).
+ 
++## Enrich per-organo (`enrich_by_message.py`, M-221 fase-2)
++Gli organi senza blocco `stats` nel registry (os3-matrix, LeVespe, oracode, …)
++sono enrichati attribuendo i commit per **id-missione**: l'id (globalmente unico)
++è cercato nel **subject** dei commit di tutti i repo git dell'ecosistema (un pass
++`git log` per repo; cross-repo — una missione può toccare più repo). PI calcolato
++con la stessa formula di `ingest_missions`. È un **fallback**: dove il registry ha
++già `stats` ricche (EGI-DOC enrichato) quelle vincono. Attribuzione **subject-only**
++di proposito: un commit il cui subject è di un'altra missione ma che menziona l'id
++nel body NON viene attribuito (no cross-reference incidentali).
++
+ ## Stato e limiti
+ - **Count: completo.** mission_stats riflette tutti gli organi, taggati.
+-- **Git-stats (PI): parziale.** 93/217 righe a PI=0. Due cause: (a) gli organi
+-  mai enrichati (os3-matrix, LeVespe, …) — `enrich_registry.py` enricha solo
+-  EGI-DOC (organ-map interna); (b) anche **EGI-DOC** ha ~45 missioni a PI=0
+-  (audit/doc senza commit git mappabili). → **fase-2**: generalizzare l'enrich
+-  con una repo-map per-organo (i descrittori `.oracode/project.json` espongono
+-  `repo_map_path`).
++- **Git-stats (PI): 208/218 reali** (era 150/150 EGI-DOC pre-M-220). I **10 residui
++  a PI=0** sono missioni il cui id non compare nel subject di alcun commit
++  (convenzione non seguita) o senza codice (parent/coordinamento, audit). Limite
++  onesto del metodo, non un bug: nessun commit referenzia l'id → nessuna stat.
++- **Attribuzione subject-only vs full-message (debito noto).** `enrich_by_message`
++  (organi engine) attribuisce per l'id nel **subject**; il path ricco
++  `enrich_registry.py` (EGI-DOC) usa `git --grep` su **tutto il messaggio**
++  (subject+body). Una missione è toccata da UN solo path (ricco se disponibile,
++  altrimenti fallback) → nessuna doppia attribuzione della stessa missione, ma i
++  due gruppi non sono perfettamente confrontabili (es. M-OS3-047: subject 7 vs
++  full-message 8). Scelta deliberata (attribuire al lavoro reale del commit, non a
++  cross-reference incidentali nel body). Harmonizzazione futura = mission a parte
++  (Trigger 6, tocca i numeri di tutti gli organi → approvazione CEO).
++- **Commit multi-id**: un commit che cita ≥2 id (es. `[REFACTOR] M-207 + M-208`)
++  attribuisce le righe per intero a entrambi → l'aggregato PI di ecosistema
++  **sovra-conta** i commit "ponte". Coerente con `enrich_registry.py` (stessa
++  convenzione), non una regressione M-221.
+ 
+ ## Test
+ `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
+ conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).
++`tests/m_221_enrich_by_id_test.py` — oracle eterogeneo (shell `git log --grep`):
++su una missione enrichata per-id (es. M-OS3-047) verifica commit/PI reali nel DB
++e il calo dei PI=0; attribuzione subject-only come l'impl.

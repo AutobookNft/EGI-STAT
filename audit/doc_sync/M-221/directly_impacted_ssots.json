@@ -1,0 +1,17 @@
+{
+  "mission_id": "M-221",
+  "ssot_registry_present": false,
+  "ssot_registry_note": "Istanza LSO ridotta: nessun docs/lso/SSOT_REGISTRY.json. Il set SSOT e' fornito esplicitamente dal chiamante mission (MULTI_REGISTRY.md + README.md). Step 2 deterministico via registry non applicabile; impatto derivato dal mandato del chiamante + analisi semantica.",
+  "impacted": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "impact_type": "caller_designated",
+      "rationale": "SSOT documentale del meccanismo multi-registry/enrich; M-221 ne aggiunge il path enrich-by-id."
+    },
+    {
+      "ssot_path": "README.md",
+      "impact_type": "caller_designated",
+      "rationale": "Indice componenti backend; la sezione 'Ingestion Missioni' descrive il flusso che M-221 estende."
+    }
+  ]
+}
