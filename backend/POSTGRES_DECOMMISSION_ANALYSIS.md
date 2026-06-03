@@ -4,6 +4,15 @@
 > Esito: `stat.*` è **isolato a EGI-STAT** (zero dipendenze cross-organo). La dismissione è sicura
 > TRANNE per UN consumatore che richiede una **decisione CEO**. Drop **gated** (script pronto, non eseguito).
 
+> **Aggiornamento M-229 (2026-06-03) — il consumatore critico e stato spostato off-Postgres.**
+> La tabella sotto descrive lo stato **a M-227**. Da M-229, `DailyStats.jsx` **non consuma piu**
+> `/api/stats/daily_detail` (v1 Postgres, all-repo): e stato **riagganciato** a
+> `/api/v2/stats/daily_detail` → `stats_v2.daily_detail` (SQLite **mission-only**). Il path
+> *"mission-scoped sufficiente"* del GATE e quindi **preso a livello frontend**. **Il DROP Postgres
+> resta GATED**: il vecchio endpoint v1 e ancora **intatto** (solo non piu usato dal frontend) e i 3
+> prerequisiti del drop (decisione CEO + backup RDS + rimozione endpoint v1) sono **invariati**.
+> Vedi SSOT STATS unita 5/8 e `MULTI_REGISTRY.md`.
+
 ## Scrittori Postgres `stat.*` (cron `daily_ingest.sh`)
 | File | Tabella | Note |
 |---|---|---|

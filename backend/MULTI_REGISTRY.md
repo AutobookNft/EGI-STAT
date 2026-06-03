@@ -101,8 +101,15 @@ daily GitHub azzerandoli. Vanno unificate in un `repos_config.py` con un flag
 **ESCLUSIVAMENTE** lo **SQLite serving** (`backend/data/stats.db`), che e popolato
 **multi-organo** da `aggregate_to_sqlite.py` (discovery via `projects.json`). Non legge piu
 `MISSION_REGISTRY.json` ne il Postgres `stat.*`. Le line-chart coprono ora tutti gli organi
-(fix *"settimane recenti zero"*). Resta differito a S3 solo `DailyStats.jsx` -> `/api/stats/daily_detail`
-(v1 Postgres).
+(fix *"settimane recenti zero"*).
+
+**Limite RISOLTO (M-229, 2026-06-03):** anche il **resoconto giornaliero** e ora off-Postgres.
+`DailyStats.jsx` e stato **riagganciato** da `/api/stats/daily_detail` (v1 Postgres, all-repo) a
+`/api/v2/stats/daily_detail` (SQLite **mission-only**, `stats_v2.daily_detail`). Da ora **entrambe** le
+viste della dashboard (grafici settimanali/mensili **E** giornaliero) leggono dalla stessa fonte unica
+mission-only; zero Postgres nel path dashboard. Il vecchio endpoint v1 Postgres resta **intatto ma non
+piu usato dal frontend** (DROP Postgres `stat.*` ancora **GATED** sulla decisione CEO — vedi SSOT STATS
+unita 5/8 e `POSTGRES_DECOMMISSION_ANALYSIS.md`).
 
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
