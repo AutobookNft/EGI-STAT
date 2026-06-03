@@ -111,6 +111,29 @@ mission-only; zero Postgres nel path dashboard. Il vecchio endpoint v1 Postgres 
 piu usato dal frontend** (DROP Postgres `stat.*` ancora **GATED** sulla decisione CEO — vedi SSOT STATS
 unita 5/8 e `POSTGRES_DECOMMISSION_ANALYSIS.md`).
 
+## Asse ORE — tabella `time_entries` + endpoint hours (M-234, 2026-06-03)
+`aggregate_to_sqlite.py` aggiunge una **6a tabella** allo schema SQLite serving:
+**`time_entries`** (`id, project, mission_id, date, source, description, minutes`;
+`CHECK source IN ('manual','commit')`, `CHECK minutes >= 0`; indici su `project` e
+`source`). È l'**asse ore** (tempo), distinto dall'asse *commit* (produzione) — tabella
+separata, mai sommata ai `weighted_commits`. Due sorgenti:
+- **`manual`** — dato reale CEO da `<instance_root>/docs/missions/TIME_ENTRIES.json`
+  (`load_time_entries_manual`), `project` preso dalla voce, `mission_id` =
+  `ledger_mission` (registri perpetui M-OS3-058; nessuna FK perché `M-LEDGER-*` non è
+  in `missions`).
+- **`commit`** — stima-euristica (`estimate_commit_minutes`) sui timestamp dei **SOLI
+  commit-mission** (esclusività mission): clustering **per repo**, `SESSION_GAP_MIN=90`
+  (gap > 90 min → nuova sessione), `PRE_SESSION_MIN=30`; minuti-sessione splittati per
+  project in proporzione ai commit (no doppio conteggio). Attribuzione project via
+  `organ`-della-mission → `descriptor.project` (le ore-commit di Capasso restano sotto
+  `Capasso`).
+
+Serving: `stats_v2.hours_by_project()` → `SUM(minutes) GROUP BY project` con
+`manual_minutes`/`commit_minutes` **espliciti** (P0-3; la stima non si presenta mai come
+ore reali), esposto da **`GET /api/v2/stats/hours`**. Meta: `time_entries_manual` /
+`time_entries_commit`. Primo dato reale: **Capasso** 300 min (incontro Stefania) +
+stima-commit.
+
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
 conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).
