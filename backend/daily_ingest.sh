@@ -32,5 +32,16 @@ else
     python3 ingest_missions.py --days 7 >> cron_ingest.log 2>&1
 fi
 
+# SQLite serving rebuild (M-226 S2) — rigenera la FONTE UNICA del serving v2
+# (data/stats.db) dai registry JSON multi-organo. La dashboard /api/v2/stats/*
+# legge SOLO da qui (SSOT §Principio cardine). Nessuna dipendenza da Postgres
+# per il serving. Idempotente (DROP+CREATE full rebuild).
+echo "🗄️  Rebuilding SQLite serving (aggregate_to_sqlite.py)..." >> cron_ingest.log
+if [ -f "$VENV_PYTHON" ]; then
+    $VENV_PYTHON aggregate_to_sqlite.py >> cron_ingest.log 2>&1
+else
+    python3 aggregate_to_sqlite.py >> cron_ingest.log 2>&1
+fi
+
 echo "✅ Finished: $(date)" >> cron_ingest.log
 echo "------------------------------------------------" >> cron_ingest.log

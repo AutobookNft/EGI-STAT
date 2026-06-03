@@ -291,7 +291,7 @@ def get_mission_timeline():
 
 @app.route('/api/v2/stats/daily', methods=['GET'])
 def get_v2_daily():
-    """Daily stats from MISSION_REGISTRY — v2.0 metrics."""
+    """Daily stats from SQLite serving (fonte unica) — v2.0 metrics."""
     from stats_v2 import aggregate_daily
     try:
         data = aggregate_daily()
@@ -303,7 +303,7 @@ def get_v2_daily():
 
 @app.route('/api/v2/stats/weekly', methods=['GET'])
 def get_v2_weekly():
-    """Weekly stats from MISSION_REGISTRY — v2.0 metrics."""
+    """Weekly stats from SQLite serving (fonte unica) — v2.0 metrics."""
     from stats_v2 import aggregate_daily, aggregate_weekly
     try:
         daily = aggregate_daily()
@@ -316,7 +316,7 @@ def get_v2_weekly():
 
 @app.route('/api/v2/stats/monthly', methods=['GET'])
 def get_v2_monthly():
-    """Monthly stats from MISSION_REGISTRY — v2.0 metrics."""
+    """Monthly stats from SQLite serving (fonte unica) — v2.0 metrics."""
     from stats_v2 import aggregate_daily, aggregate_monthly
     try:
         daily = aggregate_daily()
