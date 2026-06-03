@@ -55,6 +55,29 @@ def _paths_from_projects_json():
     return paths
 
 
+def _descriptors_from_projects_json():
+    """[(descriptor_dict, descriptor_path)] da projects.json — M-234.
+
+    Gemello di _paths_from_projects_json() ma ritorna il descrittore COMPLETO
+    (serve instance_root + repo_map_path + project per l'asse ORE, non solo
+    registry_path). Stessa fonte canonica (~/oracode-engine/projects.json).
+    """
+    out = []
+    try:
+        pj = json.loads(Path(PROJECTS_JSON).read_text())
+    except Exception:
+        return out
+    for proj in pj.get("projects", []):
+        desc = proj.get("descriptor")
+        if not desc or not os.path.isfile(desc):
+            continue
+        try:
+            out.append((json.loads(Path(desc).read_text()), desc))
+        except Exception:
+            continue
+    return out
+
+
 def _paths_from_walk():
     """Sweep filesystem con pruning: cattura i registry non engine-registered
     (fabiocherici, ORACODE-DOC, archive). os.walk pruned — glob ricorsivo
@@ -144,3 +167,40 @@ def normalize_mission(m):
         "stats": stats,
         "has_git_stats": bool(stats),
     }
+
+
+# ── Identità canonica di progetto (M-OS3-060) ────────────────────────────────
+# Stesso progetto = una sola chiave su entrambi gli assi statistici. I descrittori
+# .oracode/project.json dichiarano canonical_name (= nome reale del repo GitHub, il
+# leaf) + aliases[]; canonical_of() risolve OGNI alias al canonical_name, e per le
+# chiavi non mappate è IDENTITÀ (passthrough). Così Capasso (folder) e pinocapasso
+# (repo) collassano in un'unica chiave, senza doppio-conteggio.
+_CANONICAL_MAP = None
+
+
+def _build_canonical_map():
+    """alias -> canonical_name dai descrittori di projects.json (M-OS3-060).
+
+    Per ogni descrittore con canonical_name 'cn': map[cn]=cn; per ogni alias a in
+    (desc.aliases or []): map[a]=cn. Descrittori senza canonical_name non mappano
+    nulla (le loro chiavi restano identità via passthrough di canonical_of)."""
+    out = {}
+    for desc, _path in _descriptors_from_projects_json():
+        cn = desc.get("canonical_name")
+        if not cn:
+            continue
+        out[cn] = cn
+        for a in desc.get("aliases") or []:
+            out[a] = cn
+    return out
+
+
+def canonical_of(key):
+    """Risolve una chiave (organo/progetto) al suo canonical_name.
+
+    Identità (passthrough) per chiavi non mappate: EGI-DOC/os3-matrix/oracode e
+    ogni chiave senza alias dichiarato restano invariate. Cache a livello modulo."""
+    global _CANONICAL_MAP
+    if _CANONICAL_MAP is None:
+        _CANONICAL_MAP = _build_canonical_map()
+    return _CANONICAL_MAP.get(key, key)

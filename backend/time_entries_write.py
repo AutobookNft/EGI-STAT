@@ -32,12 +32,14 @@ class TimeEntryError(ValueError):
 
 
 def _known_projects():
-    """{project_name: instance_root} dai SOLI descrittori di projects.json.
+    """{input_accettato: instance_root} dai SOLI descrittori di projects.json.
 
     Whitelist canonica (M-237): un project non presente qui NON e scrivibile.
-    Dedup per realpath (FlorenceEGI compare 2 volte in projects.json). project =
-    campo 'project' del descrittore, fallback basename(instance_root) — stesso
-    schema di aggregate_to_sqlite._discover_instances (Coerenza Semantica).
+    Dedup per realpath (FlorenceEGI compare 2 volte in projects.json). Le chiavi
+    accettate sono: il campo 'project' del descrittore (fallback basename) E —
+    M-OS3-060 — il canonical_name e ogni alias dichiarato. Così un alias e un
+    input valido (l'anti-traversal resta: solo chiavi note), ma in scrittura il
+    project memorizzato e SEMPRE il canonical (vedi validate_payload).
     """
     out = {}
     seen = set()
@@ -49,8 +51,15 @@ def _known_projects():
         if rp in seen:
             continue
         seen.add(rp)
-        name = desc.get("project") or os.path.basename(rp)
-        out[name] = rp
+        names = {desc.get("project") or os.path.basename(rp)}
+        cn = desc.get("canonical_name")
+        if cn:
+            names.add(cn)
+        for a in desc.get("aliases") or []:
+            names.add(a)
+        for name in names:
+            if name:
+                out[name] = rp
     return out
 
 
@@ -77,6 +86,9 @@ def validate_payload(payload):
         # NON-FOUND != NOT-EXIST: qui e voluto — solo progetti noti sono scrivibili.
         raise TimeEntryError(f"unknown project: {project}")
     instance_root = known[project]
+    # M-OS3-060: normalizza al canonical_name (un alias NON crea una nuova chiave).
+    # Identità per chiavi non mappate (passthrough). L'anti-traversal e gia passato.
+    project = ecosystem.canonical_of(project)
 
     date = payload.get("date")
     # Validazione data REALE (M-237 audit P2): non solo il formato (_DATE_RE escludeva già

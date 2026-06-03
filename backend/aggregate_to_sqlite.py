@@ -201,6 +201,10 @@ def insert_mission(conn, organ, registry_path, nm):
     s = nm.get("stats") or {}
     mid = nm["id"]
 
+    # M-OS3-060: l'organo memorizzato è il canonical_name del progetto (Capasso→
+    # pinocapasso, ...). Identità per chiavi non mappate (EGI-DOC resta EGI-DOC).
+    organ = ecosystem.canonical_of(organ)
+
     # UPSERT (NON 'INSERT OR REPLACE'): REPLACE cancellerebbe la riga padre → il
     # FOREIGN KEY ... ON DELETE CASCADE svuoterebbe mission_commits/repo_day/tags già
     # inseriti dalla copia precedente, distruggendo l'UNIONE (fix audit M-225 P1 v2).
@@ -343,6 +347,9 @@ def load_time_entries_manual(conn, instances):
             if src != "manual":
                 continue
             project = e.get("project") or project_name
+            # M-OS3-060: collassa al canonical_name (Capasso→pinocapasso). Identità
+            # per chiavi non mappate. Un alias NON crea una chiave-progetto separata.
+            project = ecosystem.canonical_of(project)
             minutes = _int(e.get("minutes"))
             if not project or minutes <= 0:
                 continue
@@ -434,6 +441,8 @@ def estimate_commit_minutes(conn, instances):
         #    vive il commit (github_repo normalizzato, no prefisso org) — vista PIATTA per-repo
         #    (scelta CEO): ogni organo/progetto è una riga (EGI-DOC è UNO degli organi di FlorenceEGI).
         repo_name = str(github_repo).split("/")[-1]  # 'florenceegi/EGI-DOC'→'EGI-DOC', 'AutobookNft/pinocapasso'→'pinocapasso'
+        # M-OS3-060: collassa al canonical_name (identità per chiavi non mappate).
+        repo_name = ecosystem.canonical_of(repo_name)
         for sess in sessions:
             first_ts = sess[0]
             last_ts = sess[-1]
@@ -527,8 +536,11 @@ def aggregate(db_path, verbose=False):
                     f"union commit_hashes, scalare organ='{win_organ}'",
                     file=sys.stderr,
                 )
-            organs.add(win_organ)
-            per_organ[win_organ] = per_organ.get(win_organ, 0) + 1
+            # M-OS3-060: reporting allineato ai valori PERSISTITI (insert_mission applica
+            # canonical_of su missions.organ); meta/--verbose usa la chiave canonica, non l'alias.
+            win_organ_canon = ecosystem.canonical_of(win_organ)
+            organs.add(win_organ_canon)
+            per_organ[win_organ_canon] = per_organ.get(win_organ_canon, 0) + 1
             n_missions += 1
 
         # Asse ORE (M-234): voci manual + stima-commit. DOPO Pass 2 (mission_commits
