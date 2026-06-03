@@ -468,6 +468,45 @@ def daily_detail(date_str):
     }
 
 
+# ── Asse ORE per progetto (M-234) ─────────────────────────────────────────────
+def hours_by_project():
+    """Ore per progetto dallo SQLite serving (tabella time_entries — M-234).
+
+    Aggrega SUM(minutes) GROUP BY project separando manual/commit (P0-3:
+    parametri statistici espliciti, nessun default nascosto). manual = dato
+    reale CEO; commit = stima-euristica sui commit-mission. La distinzione
+    e ESPLICITA nello shape (manual_minutes vs commit_minutes) per onesta
+    epistemica: mai presentare la stima-commit come ore reali.
+    """
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT project,
+                   COALESCE(SUM(minutes), 0)                                          AS total_minutes,
+                   COALESCE(SUM(CASE WHEN source='manual' THEN minutes ELSE 0 END), 0) AS manual_minutes,
+                   COALESCE(SUM(CASE WHEN source='commit' THEN minutes ELSE 0 END), 0) AS commit_minutes
+            FROM time_entries
+            GROUP BY project
+            ORDER BY total_minutes DESC
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+
+    out = []
+    for r in rows:
+        tot = r["total_minutes"] or 0
+        out.append({
+            "project": r["project"],
+            "minutes": tot,
+            "hours": round(tot / 60.0, 2),
+            "manual_minutes": r["manual_minutes"] or 0,
+            "commit_minutes": r["commit_minutes"] or 0,
+        })
+    return out
+
+
 # ── Summary all-time ──────────────────────────────────────────────────────────
 def summary_stats(missions=None):
     """Summary complessivo letto dallo SQLite (aggregati SUM/AVG su missions).

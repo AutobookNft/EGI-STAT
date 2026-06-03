@@ -368,6 +368,16 @@ def get_v2_summary():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/v2/stats/hours', methods=['GET'])
+def get_v2_hours():
+    """Ore per progetto (manual + stima-commit) dallo SQLite serving — M-234."""
+    from stats_v2 import hours_by_project
+    try:
+        return jsonify(hours_by_project())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     import json
     app.run(host='0.0.0.0', debug=True, port=5000)

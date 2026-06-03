@@ -22,6 +22,7 @@ import sys
 import json
 import sqlite3
 import argparse
+import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -106,9 +107,27 @@ SCHEMA = [
         key   TEXT PRIMARY KEY,
         value TEXT
     )""",
+
+    # 6) time_entries — asse ORE (M-234): minuti per (progetto, sorgente).
+    #    manual = dato reale CEO (TIME_ENTRIES.json). commit = stima-euristica
+    #    sui timestamp dei SOLI commit-mission (principio esclusivita mission).
+    """CREATE TABLE time_entries (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        project     TEXT    NOT NULL,            -- nome progetto (chiave aggregazione ore)
+        mission_id  TEXT,                        -- ledger_mission (manual) | NULL (commit). NO FK: M-LEDGER-* non e in missions
+        date        TEXT,                        -- ISO 'YYYY-MM-DD' (manual: campo date; commit: data sessione)
+        source      TEXT    NOT NULL,            -- 'manual' | 'commit'
+        description TEXT,
+        minutes     INTEGER NOT NULL DEFAULT 0,
+        CHECK (source IN ('manual','commit')),
+        CHECK (minutes >= 0)
+    )""",
+    "CREATE INDEX idx_time_project ON time_entries(project)",
+    "CREATE INDEX idx_time_source  ON time_entries(source)",
 ]
 
 DROP_TABLES = [
+    "time_entries",
     "mission_commits", "mission_repo_day", "mission_tags", "meta", "missions",
 ]
 
@@ -271,6 +290,183 @@ def insert_mission(conn, organ, registry_path, nm):
         )
 
 
+# ── Asse ORE (M-234) ──────────────────────────────────────────────────────────
+# Euristica sessioni — costanti ESPLICITE (P0-3: niente default nascosti).
+SESSION_GAP_MIN = 90   # gap > 90 min tra due commit -> nuova sessione di lavoro
+PRE_SESSION_MIN = 30   # +30 min pre-sessione (setup/contesto prima del 1o commit)
+
+
+def _discover_instances():
+    """[(project_name, instance_root, repo_map_path)] dai descrittori projects.json.
+
+    Fonte canonica unica (riusa ecosystem._descriptors_from_projects_json).
+    Dedup per realpath(instance_root): un descrittore duplicato in projects.json
+    (es. FlorenceEGI compare 2 volte) non raddoppia le voci. organ del commit =
+    basename(instance_root) (stesso schema di ecosystem.organ_of), project =
+    campo 'project' del descrittore (fallback: basename).
+    """
+    seen = set()
+    out = []
+    for desc, _path in ecosystem._descriptors_from_projects_json():
+        root = desc.get("instance_root")
+        if not root:
+            continue
+        rp = os.path.realpath(root)
+        if rp in seen:
+            continue
+        seen.add(rp)
+        project = desc.get("project") or os.path.basename(rp)
+        out.append((project, rp, desc.get("repo_map_path")))
+    return out
+
+
+def load_time_entries_manual(conn, instances):
+    """Voci MANUALI da <instance_root>/docs/missions/TIME_ENTRIES.json (M-234).
+
+    Schema fisso: {entries:[{ledger_mission,project,date,source,description,minutes}]}.
+    Accetta SOLO source=='manual' (le commit le calcola la stima). project preso
+    dalla voce (SSOT della voce); fallback al nome progetto del descrittore.
+    Idempotente: la tabella e appena ricreata da create_schema() (DROP+CREATE).
+    """
+    n = 0
+    for project_name, root, _rmp in instances:
+        te_path = Path(root) / "docs" / "missions" / "TIME_ENTRIES.json"
+        if not te_path.is_file():
+            continue  # progetto senza ledger -> 0 voci, NON errore
+        try:
+            data = json.loads(te_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"  WARN: TIME_ENTRIES illeggibile {te_path}: {exc}", file=sys.stderr)
+            continue
+        for e in data.get("entries") or []:
+            src = e.get("source") or "manual"
+            if src != "manual":
+                continue
+            project = e.get("project") or project_name
+            minutes = _int(e.get("minutes"))
+            if not project or minutes <= 0:
+                continue
+            conn.execute(
+                "INSERT INTO time_entries (project, mission_id, date, source, description, minutes) "
+                "VALUES (?,?,?,?,?,?)",
+                (project, e.get("ledger_mission"), e.get("date"), "manual",
+                 e.get("description"), minutes),
+            )
+            n += 1
+    return n
+
+
+def estimate_commit_minutes(conn, instances):
+    """Stima-COMMIT (M-234): euristica sessioni sui timestamp dei SOLI commit-mission.
+
+    Principio esclusivita mission: contano SOLO i commit-hash gia in mission_commits.
+    Attribuzione progetto: organ della mission del commit -> project del descrittore
+    (NON la chiave REPO_MAP), cosi le ore-commit di Capasso restano sotto 'Capasso'
+    (coerenza semantica con la voce manual — Pilastro 3). Clustering PER REPO (i
+    commit dello stesso repo sono lo stesso flusso di lavoro); minuti-sessione
+    splittati per project in proporzione ai commit del project nella sessione
+    (niente doppio conteggio dei minuti totali). 1 riga time_entries per
+    (project, repo, sessione).
+    """
+    # A) hash-mission + organ di provenienza (per attribuzione progetto).
+    rows = conn.execute(
+        "SELECT mc.commit_hash, m.organ FROM mission_commits mc "
+        "JOIN missions m ON m.id = mc.mission_id"
+    ).fetchall()
+    if not rows:
+        return 0
+    organ_of_hash = {}
+    for h, organ in rows:
+        if h:
+            organ_of_hash[h] = organ  # un hash su 2 mission: tiene l'ultimo (euristica)
+    mission_hashes = set(organ_of_hash.keys())
+
+    # organ -> project (basename(instance_root) -> descriptor.project). Fallback identita.
+    project_of_organ = {}
+    for project, root, _rmp in instances:
+        project_of_organ[os.path.basename(root)] = project
+
+    # B) Unione delle REPO_MAP di tutte le istanze (le mappe possono divergere).
+    #    Dedup repo per realpath(local_dir): repo condiviso tra istanze (es. EGI-DOC)
+    #    NON processato due volte.
+    repos = {}  # realpath(local_dir) -> (local_dir, github_repo)
+    for _project, _root, rmp in instances:
+        if not rmp or not os.path.isfile(rmp):
+            continue
+        try:
+            rmap = json.loads(Path(rmp).read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for _key, meta in rmap.items():
+            local = (meta or {}).get("local_dir")
+            if not local:
+                continue
+            rl = os.path.realpath(local)
+            if rl not in repos:
+                repos[rl] = (local, (meta or {}).get("github_repo") or _key)
+
+    n = 0
+    for rl, (local, github_repo) in repos.items():
+        if not os.path.isdir(os.path.join(local, ".git")):
+            continue
+        # C) git log UNA volta per repo: hash + commit-time ISO (%cI: tz-aware).
+        try:
+            out = subprocess.run(
+                ["git", "-C", local, "log", "--all", "--no-merges", "--format=%H %cI"],
+                capture_output=True, text=True, timeout=60,
+            ).stdout
+        except Exception:
+            continue
+        commits = []  # (datetime, organ)
+        for line in out.splitlines():
+            h, _, iso = line.partition(" ")
+            if h in mission_hashes and iso:
+                try:
+                    commits.append((datetime.fromisoformat(iso), organ_of_hash[h]))
+                except ValueError:
+                    continue
+        if not commits:
+            continue
+        commits.sort(key=lambda c: c[0])
+
+        # D) Clustering sessioni: gap > 90 min apre nuova sessione.
+        sessions = []  # ognuna: list[(datetime, organ)]
+        cur = [commits[0]]
+        for c in commits[1:]:
+            if (c[0] - cur[-1][0]).total_seconds() > SESSION_GAP_MIN * 60:
+                sessions.append(cur)
+                cur = [c]
+            else:
+                cur.append(c)
+        sessions.append(cur)
+
+        # E) Per sessione: minuti = span + pre-sessione, splittati per project.
+        for sess in sessions:
+            first_ts = sess[0][0]
+            last_ts = sess[-1][0]
+            span_min = int((last_ts - first_ts).total_seconds()) // 60
+            total_min = span_min + PRE_SESSION_MIN
+            # conteggio commit per project nella sessione
+            per_project = {}
+            for ts, organ in sess:
+                proj = project_of_organ.get(organ, organ)
+                per_project[proj] = per_project.get(proj, 0) + 1
+            n_commits = len(sess)
+            day = first_ts.date().isoformat()
+            for proj, cnt in per_project.items():
+                quota = int(round(total_min * cnt / n_commits))
+                if quota <= 0:
+                    continue
+                conn.execute(
+                    "INSERT INTO time_entries (project, mission_id, date, source, description, minutes) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (proj, None, day, "commit",
+                     f"stima-commit {github_repo}: {cnt} commit-mission", quota),
+                )
+                n += 1
+    return n
+
+
 def write_meta(conn, registries_count, missions_count, organs, per_organ):
     """Scrive i metadati di audit dell'aggregazione (serving rigenerabile)."""
     rows = {
@@ -350,7 +546,17 @@ def aggregate(db_path, verbose=False):
             per_organ[win_organ] = per_organ.get(win_organ, 0) + 1
             n_missions += 1
 
+        # Asse ORE (M-234): voci manual + stima-commit. DOPO Pass 2 (mission_commits
+        # popolata, serve per l'esclusivita mission della stima).
+        instances = _discover_instances()
+        n_manual = load_time_entries_manual(conn, instances)
+        n_commit = estimate_commit_minutes(conn, instances)
+
         write_meta(conn, len(registries), n_missions, organs, per_organ)
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
+                     ("time_entries_manual", str(n_manual)))
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
+                     ("time_entries_commit", str(n_commit)))
         conn.commit()
 
         if verbose:
