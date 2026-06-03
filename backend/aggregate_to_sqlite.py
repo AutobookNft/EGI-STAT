@@ -367,23 +367,11 @@ def estimate_commit_minutes(conn, instances):
     Clustering PER REPO (commit dello stesso repo = stesso flusso); 1 riga time_entries per
     (repo, sessione), minuti = span + pre-sessione (nessun doppio conteggio).
     """
-    # A) hash-mission + organ di provenienza (per attribuzione progetto).
-    rows = conn.execute(
-        "SELECT mc.commit_hash, m.organ FROM mission_commits mc "
-        "JOIN missions m ON m.id = mc.mission_id"
-    ).fetchall()
-    if not rows:
+    # A) set dei SOLI commit-hash mission (principio esclusivita mission). L'organo della
+    #    mission NON serve piu (fix M-239: l'attribuzione e per REPO reale, non per organo).
+    mission_hashes = {h for (h,) in conn.execute("SELECT DISTINCT commit_hash FROM mission_commits") if h}
+    if not mission_hashes:
         return 0
-    organ_of_hash = {}
-    for h, organ in rows:
-        if h:
-            organ_of_hash[h] = organ  # un hash su 2 mission: tiene l'ultimo (euristica)
-    mission_hashes = set(organ_of_hash.keys())
-
-    # organ -> project (basename(instance_root) -> descriptor.project). Fallback identita.
-    project_of_organ = {}
-    for project, root, _rmp in instances:
-        project_of_organ[os.path.basename(root)] = project
 
     # B) Unione delle REPO_MAP di tutte le istanze (le mappe possono divergere).
     #    Dedup repo per realpath(local_dir): repo condiviso tra istanze (es. EGI-DOC)
@@ -416,23 +404,23 @@ def estimate_commit_minutes(conn, instances):
             ).stdout
         except Exception:
             continue
-        commits = []  # (datetime, organ)
+        commits = []  # list[datetime] dei commit-mission di questo repo
         for line in out.splitlines():
             h, _, iso = line.partition(" ")
             if h in mission_hashes and iso:
                 try:
-                    commits.append((datetime.fromisoformat(iso), organ_of_hash[h]))
+                    commits.append(datetime.fromisoformat(iso))
                 except ValueError:
                     continue
         if not commits:
             continue
-        commits.sort(key=lambda c: c[0])
+        commits.sort()
 
         # D) Clustering sessioni: gap > 90 min apre nuova sessione.
-        sessions = []  # ognuna: list[(datetime, organ)]
+        sessions = []  # ognuna: list[datetime]
         cur = [commits[0]]
         for c in commits[1:]:
-            if (c[0] - cur[-1][0]).total_seconds() > SESSION_GAP_MIN * 60:
+            if (c - cur[-1]).total_seconds() > SESSION_GAP_MIN * 60:
                 sessions.append(cur)
                 cur = [c]
             else:
@@ -447,8 +435,8 @@ def estimate_commit_minutes(conn, instances):
         #    (scelta CEO): ogni organo/progetto è una riga (EGI-DOC è UNO degli organi di FlorenceEGI).
         repo_name = str(github_repo).split("/")[-1]  # 'florenceegi/EGI-DOC'→'EGI-DOC', 'AutobookNft/pinocapasso'→'pinocapasso'
         for sess in sessions:
-            first_ts = sess[0][0]
-            last_ts = sess[-1][0]
+            first_ts = sess[0]
+            last_ts = sess[-1]
             span_min = int((last_ts - first_ts).total_seconds()) // 60
             total_min = span_min + PRE_SESSION_MIN
             if total_min <= 0:
