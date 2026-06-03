@@ -182,14 +182,31 @@ def insert_mission(conn, organ, registry_path, nm):
     s = nm.get("stats") or {}
     mid = nm["id"]
 
+    # UPSERT (NON 'INSERT OR REPLACE'): REPLACE cancellerebbe la riga padre → il
+    # FOREIGN KEY ... ON DELETE CASCADE svuoterebbe mission_commits/repo_day/tags già
+    # inseriti dalla copia precedente, distruggendo l'UNIONE (fix audit M-225 P1 v2).
+    # ON CONFLICT(id) DO UPDATE aggiorna in-place: nessun CASCADE, i figli si accumulano.
     conn.execute(
-        """INSERT OR REPLACE INTO missions (
+        """INSERT INTO missions (
             id, organ, title, status, mission_type, date_opened, date_closed,
             cross_organ, files_modified, doc_sync_executed, has_git_stats,
             total_commits, weighted_commits, lines_added, lines_deleted,
             lines_net, lines_touched, files_touched, cognitive_load,
             productivity_index, calculated_at, registry_path
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(id) DO UPDATE SET
+            organ=excluded.organ, title=excluded.title, status=excluded.status,
+            mission_type=excluded.mission_type, date_opened=excluded.date_opened,
+            date_closed=excluded.date_closed, cross_organ=excluded.cross_organ,
+            files_modified=excluded.files_modified,
+            doc_sync_executed=excluded.doc_sync_executed,
+            has_git_stats=excluded.has_git_stats, total_commits=excluded.total_commits,
+            weighted_commits=excluded.weighted_commits, lines_added=excluded.lines_added,
+            lines_deleted=excluded.lines_deleted, lines_net=excluded.lines_net,
+            lines_touched=excluded.lines_touched, files_touched=excluded.files_touched,
+            cognitive_load=excluded.cognitive_load,
+            productivity_index=excluded.productivity_index,
+            calculated_at=excluded.calculated_at, registry_path=excluded.registry_path""",
         (
             mid,
             organ,
@@ -306,11 +323,17 @@ def aggregate(db_path, verbose=False):
         # es. M-OS3-* vive in os3-matrix con piu commit) processandola per ULTIMA — cosi
         # INSERT OR REPLACE lascia l'organo+metriche corretti. MAI scartare una copia
         # (ometterne i commit_hashes violerebbe la ricostruibilita — SSOT §commit_hashes).
-        def _richness(t):
-            return len((t[2].get("stats") or {}).get("commit_hashes") or [])
+        # Chiave di ordinamento ESPLICITA (P0-3, niente default impliciti da ordine FS):
+        # primaria = #commit_hashes (copia ricca per ultima → vince la riga scalare);
+        # tiebreaker dichiarato = nome organo (a parità di ricchezza vince l'organo
+        # lessicograficamente maggiore, processato per ultimo — es. 'os3-matrix' > 'oracode',
+        # così le missioni engine M-OS3-* restano attribuite a os3-matrix). Deterministico.
+        def _sort_key(t):
+            organ, _registry, nm = t
+            return (len((nm.get("stats") or {}).get("commit_hashes") or []), organ)
 
         for mid, copies in by_id.items():
-            copies_sorted = sorted(copies, key=_richness)  # copia ricca per ultima
+            copies_sorted = sorted(copies, key=_sort_key)  # ricca+organo-maggiore per ultima
             for organ, registry_path, nm in copies_sorted:
                 insert_mission(conn, organ, registry_path, nm)
             win_organ = copies_sorted[-1][0]
