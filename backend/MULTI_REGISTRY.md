@@ -96,11 +96,13 @@ quei due ricostruiscono da git locale e i cloni sono stale → sovrascriverebber
 daily GitHub azzerandoli. Vanno unificate in un `repos_config.py` con un flag
 "GitHub-only-no-local".
 
-**Limite separato (non M-222):** i grafici **v2** della dashboard
-(`/api/v2/stats/*`) sono mission-based: `stats_v2` legge **`MISSION_REGISTRY.json`
-del solo EGI-DOC**, NON la tabella `mission_stats` multi-registry né `daily_stats`.
-Quindi le line-chart principali restano EGI-DOC-only finché stats_v2 non viene
-puntato alla discovery multi-registry (mission futura).
+**Limite RISOLTO (M-226, 2026-06-03):** i grafici **v2** della dashboard
+(`/api/v2/stats/*`) NON sono piu EGI-DOC-only. `stats_v2` e stato riscritto per leggere
+**ESCLUSIVAMENTE** lo **SQLite serving** (`backend/data/stats.db`), che e popolato
+**multi-organo** da `aggregate_to_sqlite.py` (discovery via `projects.json`). Non legge piu
+`MISSION_REGISTRY.json` ne il Postgres `stat.*`. Le line-chart coprono ora tutti gli organi
+(fix *"settimane recenti zero"*). Resta differito a S3 solo `DailyStats.jsx` -> `/api/stats/daily_detail`
+(v1 Postgres).
 
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
