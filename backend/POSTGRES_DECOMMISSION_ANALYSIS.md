@@ -41,6 +41,18 @@ le-vespe-cafe, pinocapasso, …). `mission_repo_day` (SQLite) = **solo** commit 
   (alimenta `daily_detail`).
 - `migrations/drop_stat_schema.sql`: **pronto, NON eseguito** (boundary: nessun DROP autonomo).
 
+## Script admin MANUALI su `stat.*` (non-cron, gated — censiti per completezza P0-8)
+Non nel cron, non chiamati da path runtime; eseguiti a mano. Da NON dimenticare alla dismissione:
+| Script | Operazione su stat.* | Gate |
+|---|---|---|
+| `reset_db.py:34` | `TRUNCATE stat.commits, weekly_stats, daily_stats CASCADE` (distruttivo) | `__main__` + `input("...WIPE...? (y/n)")` — non scatta autonomo |
+| `init_remote_db.py` | CREATE SCHEMA/TABLE stat.* | manuale, idempotente |
+| `rebuild_all_daily.py` | rebuild stat.daily_stats | manuale |
+| `migrate_v2_stats.py`, `migrate_mission_stats_organ.py` | migrazioni schema stat.* one-shot | manuale, storiche |
+
+Nessuno di questi è in `daily_ingest.sh` né richiamato runtime. Alla dismissione (post-decisione CEO):
+archiviare/rimuovere insieme allo schema (non più utili senza Postgres `stat.*`).
+
 ## Connettività
 Postgres `stat.*` letto/scritto SOLO da EGI-STAT. `EGI-DOC/pipeline` usa `rag_natan` (schema diverso, non-stat).
 Nessun altro organo tocca `stat.*`.
