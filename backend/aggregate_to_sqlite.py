@@ -321,8 +321,10 @@ def aggregate(db_path, verbose=False):
         # commit_hashes/by_repo_day/tags si UNISCONO (INSERT OR IGNORE / PK composita).
         # La riga scalare 'missions' la vince la copia con PIU commit_hashes (autoritativa:
         # es. M-OS3-* vive in os3-matrix con piu commit) processandola per ULTIMA — cosi
-        # INSERT OR REPLACE lascia l'organo+metriche corretti. MAI scartare una copia
-        # (ometterne i commit_hashes violerebbe la ricostruibilita — SSOT §commit_hashes).
+        # l'UPSERT (ON CONFLICT(id) DO UPDATE in insert_mission) lascia organo+metriche
+        # corretti SENZA cancellare la riga padre (niente CASCADE → figli accumulati).
+        # MAI scartare una copia (ometterne i commit_hashes violerebbe la ricostruibilita
+        # — SSOT §commit_hashes).
         # Chiave di ordinamento ESPLICITA (P0-3, niente default impliciti da ordine FS):
         # primaria = #commit_hashes (copia ricca per ultima → vince la riga scalare);
         # tiebreaker dichiarato = nome organo (a parità di ricchezza vince l'organo
