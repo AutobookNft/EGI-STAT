@@ -134,6 +134,22 @@ ore reali), esposto da **`GET /api/v2/stats/hours`**. Meta: `time_entries_manual
 `time_entries_commit`. Primo dato reale: **Capasso** 300 min (incontro Stefania) +
 stima-commit.
 
+### Lato-scrittura asse ORE (M-237, 2026-06-03)
+M-234 era **sola lettura**. M-237 aggiunge il lato-scrittura delle ore `manual`:
+- **`POST /api/v2/stats/time_entries`** (`api.py` → `time_entries_write.py`): valida il payload
+  (`project` **whitelisted** da `~/oracode-engine/projects.json` — anti path-traversal; `date` ISO reale via
+  `date.fromisoformat`; `minutes` int > 0, `bool` escluso; `description` non vuota), **appende in modo
+  atomico** (tmp + `os.replace`, nessuna shell/interpolazione) al `TIME_ENTRIES.json` dell'**istanza**
+  risolta dalla whitelist, poi **rigenera l'SQLite serving in-process** (`aggregate()`, no subprocess) →
+  la voce compare subito in `GET /api/v2/stats/hours`. Validazione fallita → **400 senza scrittura**
+  (UEM-first; mai 500 su input utente). Esito → **201** con la voce scritta.
+- **Modale React "Aggiungi tempo"** (`frontend/src/components/AddTimeModal.jsx`, montato in `App.jsx`):
+  pannello *Ore per progetto* (legge `GET /hours`) con pulsante **+ Aggiungi tempo** (progetto da select
+  whitelist, data, durata ore+minuti → `minutes`, descrizione) → POST → on-success ricarica le ore.
+
+Le voci scritte via endpoint sono identiche a quelle inserite a mano nel file: `source: "manual"`,
+`ledger_mission: "M-LEDGER-<PROJECT>"`. Contratto file: vedi `TIME_ENTRIES_FORMAT.md`.
+
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
 conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).

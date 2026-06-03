@@ -52,6 +52,20 @@ descrittori `~/oracode-engine/projects.json`.
 - **Asse separato dalla produzione**: queste ore NON entrano nei `weighted_commits` né in
   alcuna metrica di produzione mission.
 
+## Inserimento voci (M-237)
+Le voci `manual` si aggiungono in **due modi equivalenti**:
+- **Edit manuale del file** — il CEO scrive direttamente questo `TIME_ENTRIES.json` (modo originario M-234).
+- **Modale "Aggiungi tempo" → endpoint POST** — la dashboard espone il pannello *Ore per progetto* con
+  il pulsante **+ Aggiungi tempo** (`AddTimeModal.jsx`); il salvataggio fa `POST /api/v2/stats/time_entries`
+  (handler `time_entries_write.py`). Il backend **valida** il payload (`project` whitelisted da
+  `~/oracode-engine/projects.json` → niente path traversal; `date` ISO reale; `minutes` int > 0;
+  `description` non vuota), **appende in modo atomico** (tmp + `os.replace`, no shell) la voce a questo file,
+  poi **rigenera l'SQLite serving** in-process così la voce compare subito in `GET /api/v2/stats/hours`.
+  La voce inserita ha sempre `source: "manual"` e `ledger_mission: "M-LEDGER-<PROJECT>"`.
+
+Le voci aggiunte via endpoint rispettano lo **stesso schema** descritto sopra: i due modi scrivono lo
+stesso file con lo stesso contratto.
+
 ## Serving
 `GET /api/v2/stats/hours` → lista per progetto `{project, minutes, hours, manual_minutes,
 commit_minutes}` ordinata per minuti. Meta SQLite: `time_entries_manual`,
