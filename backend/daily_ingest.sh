@@ -24,13 +24,17 @@ else
     python3 ingest_to_remotedb.py --days 1 >> cron_ingest.log 2>&1
 fi
 
-# Mission-based enrichment (reads MISSION_REGISTRY.json from EGI-DOC)
-echo "📋 Starting Mission Enrichment..." >> cron_ingest.log
-if [ -f "$VENV_PYTHON" ]; then
-    $VENV_PYTHON ingest_missions.py --days 7 >> cron_ingest.log 2>&1
-else
-    python3 ingest_missions.py --days 7 >> cron_ingest.log 2>&1
-fi
+# Mission-based enrichment verso Postgres stat.* — DISATTIVATO (M-227 S3, REVERSIBILE).
+# Ridondante: i dati mission-scoped sono ora nel serving SQLite (aggregate_to_sqlite.py, M-225/226)
+# che è la fonte unica della dashboard. Lasciato qui commentato (NON cancellato) per reversibilità.
+# Riattivare = togliere il commento. L'ingest all-repo (ingest_to_remotedb sopra) resta ATTIVO finché
+# la decisione CEO su daily_detail/all-repo non è presa (vedi POSTGRES_DECOMMISSION_ANALYSIS.md).
+# echo "📋 Starting Mission Enrichment..." >> cron_ingest.log
+# if [ -f "$VENV_PYTHON" ]; then
+#     $VENV_PYTHON ingest_missions.py --days 7 >> cron_ingest.log 2>&1
+# else
+#     python3 ingest_missions.py --days 7 >> cron_ingest.log 2>&1
+# fi
 
 # SQLite serving rebuild (M-226 S2) — rigenera la FONTE UNICA del serving v2
 # (data/stats.db) dai registry JSON multi-organo. La dashboard /api/v2/stats/*
