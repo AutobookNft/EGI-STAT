@@ -123,10 +123,11 @@ separata, mai sommata ai `weighted_commits`. Due sorgenti:
   in `missions`).
 - **`commit`** — stima-euristica (`estimate_commit_minutes`) sui timestamp dei **SOLI
   commit-mission** (esclusività mission): clustering **per repo**, `SESSION_GAP_MIN=90`
-  (gap > 90 min → nuova sessione), `PRE_SESSION_MIN=30`; minuti-sessione splittati per
-  project in proporzione ai commit (no doppio conteggio). Attribuzione project via
-  `organ`-della-mission → `descriptor.project` (le ore-commit di Capasso restano sotto
-  `Capasso`).
+  (gap > 90 min → nuova sessione), `PRE_SESSION_MIN=30`. **Attribuzione per REPO reale**
+  (fix M-239): il `project` della riga è il **repo reale** dove vive il commit (`github_repo`
+  normalizzato a basename: `florenceegi/EGI-DOC`→`EGI-DOC`, `AutobookNft/pinocapasso`→`pinocapasso`),
+  **NON** l'organo scalare della mission. 1 riga per **(repo, sessione)**, `minutes = span + PRE_SESSION_MIN`
+  (niente split per-project, no doppio conteggio).
 
 Serving: `stats_v2.hours_by_project()` → `SUM(minutes) GROUP BY project` con
 `manual_minutes`/`commit_minutes` **espliciti** (P0-3; la stima non si presenta mai come
@@ -149,6 +150,17 @@ M-234 era **sola lettura**. M-237 aggiunge il lato-scrittura delle ore `manual`:
 
 Le voci scritte via endpoint sono identiche a quelle inserite a mano nel file: `source: "manual"`,
 `ledger_mission: "M-LEDGER-<PROJECT>"`. Contratto file: vedi `TIME_ENTRIES_FORMAT.md`.
+
+### Stima-commit per REPO reale — vista piatta (M-239, 2026-06-03)
+La versione M-234 di `estimate_commit_minutes` attribuiva i minuti all'**organo scalare** della mission,
+mappato a `descriptor.project` via `project_of_organ`. Per le ~170 missioni FlorenceEGI l'organo scalare
+valeva **sempre** `EGI-DOC`→`FlorenceEGI` → tutti gli organi schiacciati in un lump `FlorenceEGI`,
+`le-vespe-cafe` **perso**. Fix M-239: l'attribuzione è per **REPO reale** (`github_repo` normalizzato a
+basename), **vista piatta per-repo** (scelta CEO) — `EGI-DOC` è **uno** dei 17 organi/progetti, non
+l'ecosistema; `le-vespe-cafe` presente. 1 riga `time_entries` per **(repo, sessione)**, niente split
+per-project. Rimosso il codice morto (`project_of_organ`, query `organ_of_hash`, organo nelle tuple →
+`commits`/`sessions` = `list[datetime]`; Pilastro 2). Totale stima-commit **invariato** (21455 min):
+cambia la ripartizione, non il monte-ore. Test: `EGI-DOC/docs/tests/m-239/test_hours_per_repo.sh`.
 
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
