@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminChart from './components/AdminChart';
 import DailyStats from './components/DailyStats';
+import AddTimeModal from './components/AddTimeModal';
 import { LayoutDashboard, TrendingUp, Brain, Target, GitCommit, FileCode, Activity } from 'lucide-react';
 import './item.css';
 
@@ -63,6 +64,10 @@ function App() {
       </header>
 
       <main className="main-content">
+        <AddTimeModal />
+
+        <div className="section-divider" style={{ margin: '40px 0', borderBottom: '1px solid #333' }}></div>
+
         <DailyStats active={true} />
 
         <div className="section-divider" style={{ margin: '40px 0', borderBottom: '1px solid #333' }}></div>

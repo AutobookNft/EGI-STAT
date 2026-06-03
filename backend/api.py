@@ -378,6 +378,43 @@ def get_v2_hours():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/v2/stats/time_entries', methods=['POST'])
+def post_v2_time_entry():
+    """Aggiunge una voce ore MANUALE al ledger del progetto — M-237.
+
+    Lato-scrittura dell'asse ORE (M-234 era sola lettura). Payload JSON:
+    {project, date(YYYY-MM-DD), minutes(int>0), description}. project DEVE essere
+    whitelisted (solo nomi in projects.json -> niente path traversal). Flusso:
+    valida -> append ATOMICO al TIME_ENTRIES.json dell'istanza (tmp+os.replace,
+    no shell) -> refresh SQLite IN-PROCESS (aggregate(), niente subprocess) cosi
+    la voce compare subito in GET /api/v2/stats/hours -> 201. Validazione fallita
+    -> 400 SENZA scrittura (UEM-first: errore strutturato, mai 500 su input utente).
+    """
+    from time_entries_write import validate_payload, append_entry, TimeEntryError
+    from aggregate_to_sqlite import aggregate, DEFAULT_DB
+
+    payload = request.get_json(silent=True)
+    try:
+        project, instance_root, entry = validate_payload(payload)
+    except TimeEntryError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    try:
+        path = append_entry(instance_root, entry)
+        aggregate(DEFAULT_DB)  # refresh serving SQLite (idempotente, full rebuild)
+    except TimeEntryError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({
+        "ok": True,
+        "project": project,
+        "entry": entry,
+        "path": path,
+    }), 201
+
+
 if __name__ == '__main__':
     import json
     app.run(host='0.0.0.0', debug=True, port=5000)
