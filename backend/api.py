@@ -326,6 +326,23 @@ def get_v2_monthly():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/v2/stats/daily_detail', methods=['GET'])
+def get_v2_daily_detail():
+    """Daily detail MISSION-ONLY from SQLite serving (fonte unica) — M-229.
+
+    Sostituisce /api/stats/daily_detail (Postgres all-repo) per la dashboard:
+    conta SOLO il lavoro-mission (Principio di esclusività mission).
+    """
+    from stats_v2 import daily_detail
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({"error": "Date parameter required (YYYY-MM-DD)"}), 400
+    try:
+        return jsonify(daily_detail(date_str))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/v2/stats/missions', methods=['GET'])
 def get_v2_missions():
     """All mission metrics with CL v2.0 + PI v2.0."""

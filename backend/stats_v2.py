@@ -279,6 +279,195 @@ def aggregate_monthly(daily_data=None):
     return _aggregate_period(daily_data, _month_key)
 
 
+# ── Dettaglio giornaliero MISSION-ONLY (M-229) ────────────────────────────────
+# Mappa tag-dominante -> emoji. I tag sono quelli del registry mission (mission_tags).
+_TAG_ICON = {
+    "FEAT": "🚀",
+    "FIX": "🐛",
+    "REFACTOR": "♻️",
+    "DOC": "📖",
+    "TEST": "✅",
+    "ARCH": "🏛️",
+}
+_DEFAULT_ICON = "🎯"
+
+
+def _dominant_tag(tag_counts):
+    """Tag dominante (count massimo) da un dict {tag: count}; None se vuoto.
+
+    Tie-break deterministico: a parità di count vince il tag alfabeticamente
+    minore (Pilastro 3: output riproducibile, niente ordine d'inserimento).
+    """
+    if not tag_counts:
+        return None
+    return max(sorted(tag_counts.keys()), key=lambda t: tag_counts[t])
+
+
+def daily_detail(date_str):
+    """Dettaglio MISSION-ONLY di un singolo giorno, letto SOLO dallo SQLite.
+
+    Fonte unica: mission_repo_day (lavoro per repo/giorno) + missions (CL/PI, tag).
+    "Mission attive quel giorno" = mission con almeno una riga in mission_repo_day
+    per `date_str` (Principio di esclusività mission: se non passa da una mission,
+    non conta — quindi il giorno È definito dal lavoro-mission registrato).
+
+    Shape ritornata:
+      { "date", "summary": {...}, "repositories": [ {...}, ... ] }
+
+    Garanzia di contratto (test M-229):
+      sum(repositories[].commits) == SUM(mission_repo_day.commits) per quel giorno.
+
+    P0-3 (Statistics Rule): nessun default nascosto. coding_hours/testing_hours
+    sono 0.0 ESPLICITO — il modello mission non traccia ore, dichiararlo onesto
+    è preferibile a stimarle. Ogni campo numerico è float/int, mai None.
+    """
+    conn = _connect()
+    try:
+        repo_rows = conn.execute(
+            """
+            SELECT repo                                  AS repo_name,
+                   SUM(commits)                          AS total_commits,
+                   SUM(lines_added)                      AS lines_added,
+                   SUM(lines_deleted)                    AS lines_deleted,
+                   SUM(lines_added) - SUM(lines_deleted) AS net_lines,
+                   SUM(files_touched)                    AS files_touched
+            FROM mission_repo_day
+            WHERE day = ?
+            GROUP BY repo
+            ORDER BY repo
+            """,
+            (date_str,),
+        ).fetchall()
+
+        # Per ogni repo: quali mission lo toccano quel giorno (per medie CL/PI e tag).
+        repo_missions = defaultdict(set)
+        all_mission_ids = set()
+        for r in conn.execute(
+            "SELECT DISTINCT mission_id, repo FROM mission_repo_day WHERE day = ?",
+            (date_str,),
+        ).fetchall():
+            repo_missions[r["repo"]].add(r["mission_id"])
+            all_mission_ids.add(r["mission_id"])
+
+        # CL/PI per mission (pre-calcolati, single-source) e tag per mission.
+        mission_cl = {}
+        mission_pi = {}
+        if all_mission_ids:
+            qmarks = ",".join("?" * len(all_mission_ids))
+            ids = list(all_mission_ids)
+            for m in conn.execute(
+                f"SELECT id, cognitive_load, productivity_index FROM missions WHERE id IN ({qmarks})",
+                ids,
+            ).fetchall():
+                mission_cl[m["id"]] = m["cognitive_load"]
+                mission_pi[m["id"]] = m["productivity_index"]
+
+            tags_by_mission = defaultdict(lambda: defaultdict(int))
+            for t in conn.execute(
+                f"SELECT mission_id, tag, count FROM mission_tags WHERE mission_id IN ({qmarks})",
+                ids,
+            ).fetchall():
+                tags_by_mission[t["mission_id"]][t["tag"]] += t["count"]
+        else:
+            tags_by_mission = {}
+    finally:
+        conn.close()
+
+    def _avg(values):
+        vals = [v for v in values if v is not None]
+        return round(sum(vals) / len(vals), 2) if vals else 0.0
+
+    repositories = []
+    sum_commits = 0
+    sum_weighted = 0.0
+    sum_added = 0
+    sum_deleted = 0
+    sum_net = 0
+    sum_files = 0
+    day_tag_counts = defaultdict(int)
+    cl_all = []
+    pi_all = []
+
+    for rr in repo_rows:
+        repo = rr["repo_name"]
+        mids = repo_missions.get(repo, set())
+
+        cl = _avg([mission_cl.get(m) for m in mids])
+        pi = _avg([mission_pi.get(m) for m in mids])
+
+        # weighted_commits per repo: il modello mission non conserva i pesi
+        # per-repo-giorno; usiamo i commit grezzi (peso 1) come proxy onesto.
+        weighted = float(rr["total_commits"] or 0)
+
+        # tag dominante del lavoro-mission di questo repo nel giorno
+        repo_tag_counts = defaultdict(int)
+        for m in mids:
+            for tag, cnt in tags_by_mission.get(m, {}).items():
+                repo_tag_counts[tag] += cnt
+                day_tag_counts[tag] += cnt
+        dom = _dominant_tag(repo_tag_counts)
+        day_type = dom if dom else "mission"
+        icon = _TAG_ICON.get(dom, _DEFAULT_ICON)
+
+        commits = int(rr["total_commits"] or 0)
+        added = int(rr["lines_added"] or 0)
+        deleted = int(rr["lines_deleted"] or 0)
+        net = int(rr["net_lines"] or 0)
+        files = int(rr["files_touched"] or 0)
+
+        repositories.append({
+            "repo_name": repo,
+            "commits": commits,          # alias contrattuale (== total_commits)
+            "total_commits": commits,
+            "lines_added": added,
+            "lines_deleted": deleted,
+            "net_lines": net,
+            "files_touched": files,
+            "weighted_commits": round(weighted, 2),
+            "cognitive_load": cl,
+            "productivity_score": pi,
+            "day_type": day_type,
+            "day_type_icon": icon,
+        })
+
+        sum_commits += commits
+        sum_weighted += weighted
+        sum_added += added
+        sum_deleted += deleted
+        sum_net += net
+        sum_files += files
+        cl_all.extend(mission_cl.get(m) for m in mids)
+        pi_all.extend(mission_pi.get(m) for m in mids)
+
+    # Medie a livello giorno: sulle mission DISTINTE attive quel giorno (non
+    # pesate sul numero di repo toccati), coerenti con missions_count.
+    distinct_cl = [mission_cl.get(m) for m in all_mission_ids]
+    distinct_pi = [mission_pi.get(m) for m in all_mission_ids]
+    day_dom = _dominant_tag(day_tag_counts)
+    summary = {
+        "total_commits": sum_commits,
+        "weighted_commits": round(sum_weighted, 2),
+        "lines_added": sum_added,
+        "lines_deleted": sum_deleted,
+        "net_lines": sum_net,
+        "files_touched": sum_files,
+        "cognitive_load": _avg(distinct_cl),
+        "productivity_score": _avg(distinct_pi),
+        # Onesto (P0-3): il modello mission non traccia le ore -> 0.0 esplicito.
+        "coding_hours": 0.0,
+        "testing_hours": 0.0,
+        "day_type": day_dom if day_dom else "mission",
+        "day_type_icon": _TAG_ICON.get(day_dom, _DEFAULT_ICON),
+        "missions_count": len(all_mission_ids),
+    }
+
+    return {
+        "date": date_str,
+        "summary": summary,
+        "repositories": repositories,
+    }
+
+
 # ── Summary all-time ──────────────────────────────────────────────────────────
 def summary_stats(missions=None):
     """Summary complessivo letto dallo SQLite (aggregati SUM/AVG su missions).

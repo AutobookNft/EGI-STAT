@@ -15,7 +15,7 @@ export default function DailyStats({ active }) {
     const fetchData = async (date) => {
         setLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/stats/daily_detail?date=${date}`);
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/v2/stats/daily_detail?date=${date}`);
             const json = await res.json();
             if (res.ok) {
                 setData(json);
@@ -73,38 +73,38 @@ export default function DailyStats({ active }) {
                     />
                     <StatCard
                         label="Righe Nette (Saldo)"
-                        value={data.summary.net_lines > 0 ? `+${data.summary.net_lines}` : data.summary.net_lines}
+                        value={(data.summary.net_lines ?? 0) > 0 ? `+${data.summary.net_lines}` : (data.summary.net_lines ?? 0)}
                         unit="righe"
                         color="#2ecc71"
                         icon="📉"
                     />
                     <StatCard
                         label="Indice Produttività (Output)"
-                        value={data.summary.productivity_score.toFixed(2)}
+                        value={(data.summary.productivity_score ?? 0).toFixed(2)}
                         unit="pti"
                         color="#00cec9"
                     />
                     <StatCard
                         label="Carico Cognitivo (Complessità)"
-                        value={data.summary.cognitive_load.toFixed(2)}
+                        value={(data.summary.cognitive_load ?? 0).toFixed(2)}
                         unit="/ 3.5"
                         color="#ff7675"
                     />
                     <StatCard
                         label="File Toccati (Volume)"
-                        value={data.summary.files_touched}
+                        value={data.summary.files_touched ?? 0}
                         icon="📂"
                         color="#fab1a0"
                     />
                     <StatCard
                         label="Ore Coding Stimate"
-                        value={data.summary.coding_hours.toFixed(2)}
+                        value={(data.summary.coding_hours ?? 0).toFixed(2)}
                         unit="h"
                         color="#fdcb6e"
                     />
                     <StatCard
                         label="Commit Pesati (Impatto)"
-                        value={data.summary.weighted_commits.toFixed(2)}
+                        value={(data.summary.weighted_commits ?? 0).toFixed(2)}
                         icon="⚖️"
                         color="#dfe6e9"
                     />
@@ -142,11 +142,11 @@ export default function DailyStats({ active }) {
                                 }
                                 return (
                                     <tr key={repo.repo_name} style={{ borderBottom: '1px solid #2a2a2a' }}>
-                                        <td style={{ padding: '10px' }}>{repo.repo_name.replace('AutobookNft/', '')}</td>
+                                        <td style={{ padding: '10px' }}>{(repo.repo_name || '').replace('AutobookNft/', '')}</td>
                                         <td style={{ padding: '10px' }}>{displayIcon} {repo.day_type || 'N/A'}</td>
-                                        <td style={{ padding: '10px' }}>{repo.files_touched}</td>
-                                        <td style={{ padding: '10px' }}>{repo.cognitive_load.toFixed(2)}</td>
-                                        <td style={{ padding: '10px', fontWeight: 'bold', color: '#00cec9' }}>{repo.productivity_score.toFixed(2)}</td>
+                                        <td style={{ padding: '10px' }}>{repo.files_touched ?? 0}</td>
+                                        <td style={{ padding: '10px' }}>{(repo.cognitive_load ?? 0).toFixed(2)}</td>
+                                        <td style={{ padding: '10px', fontWeight: 'bold', color: '#00cec9' }}>{(repo.productivity_score ?? 0).toFixed(2)}</td>
                                     </tr>
                                 );
                             })}
