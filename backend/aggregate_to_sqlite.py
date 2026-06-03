@@ -360,13 +360,12 @@ def estimate_commit_minutes(conn, instances):
     """Stima-COMMIT (M-234): euristica sessioni sui timestamp dei SOLI commit-mission.
 
     Principio esclusivita mission: contano SOLO i commit-hash gia in mission_commits.
-    Attribuzione progetto: organ della mission del commit -> project del descrittore
-    (NON la chiave REPO_MAP), cosi le ore-commit di Capasso restano sotto 'Capasso'
-    (coerenza semantica con la voce manual — Pilastro 3). Clustering PER REPO (i
-    commit dello stesso repo sono lo stesso flusso di lavoro); minuti-sessione
-    splittati per project in proporzione ai commit del project nella sessione
-    (niente doppio conteggio dei minuti totali). 1 riga time_entries per
-    (project, repo, sessione).
+    Attribuzione progetto = il REPO REALE dove vive il commit (github_repo normalizzato),
+    NON l'organo scalare della mission (fix M-239: l'organo scalare valeva sempre 'EGI-DOC'
+    per le missioni FlorenceEGI → schiacciava tutti gli organi in 'FlorenceEGI' e perdeva
+    le-vespe-cafe). Vista PIATTA per-repo: EGI-DOC e UNO degli organi, non l'ecosistema.
+    Clustering PER REPO (commit dello stesso repo = stesso flusso); 1 riga time_entries per
+    (repo, sessione), minuti = span + pre-sessione (nessun doppio conteggio).
     """
     # A) hash-mission + organ di provenienza (per attribuzione progetto).
     rows = conn.execute(
@@ -440,30 +439,28 @@ def estimate_commit_minutes(conn, instances):
                 cur.append(c)
         sessions.append(cur)
 
-        # E) Per sessione: minuti = span + pre-sessione, splittati per project.
+        # E) Per sessione: minuti = span + pre-sessione, attribuiti al REPO REALE.
+        #    FIX M-239 (conflazione EGI-DOC=FlorenceEGI): NON si usa l'organo scalare della
+        #    mission (sempre 'EGI-DOC'→'FlorenceEGI' per le missioni FlorenceEGI, che schiacciava
+        #    tutti gli organi in un lump e perdeva le-vespe-cafe). Il progetto = il REPO reale dove
+        #    vive il commit (github_repo normalizzato, no prefisso org) — vista PIATTA per-repo
+        #    (scelta CEO): ogni organo/progetto è una riga (EGI-DOC è UNO degli organi di FlorenceEGI).
+        repo_name = str(github_repo).split("/")[-1]  # 'florenceegi/EGI-DOC'→'EGI-DOC', 'AutobookNft/pinocapasso'→'pinocapasso'
         for sess in sessions:
             first_ts = sess[0][0]
             last_ts = sess[-1][0]
             span_min = int((last_ts - first_ts).total_seconds()) // 60
             total_min = span_min + PRE_SESSION_MIN
-            # conteggio commit per project nella sessione
-            per_project = {}
-            for ts, organ in sess:
-                proj = project_of_organ.get(organ, organ)
-                per_project[proj] = per_project.get(proj, 0) + 1
-            n_commits = len(sess)
+            if total_min <= 0:
+                continue
             day = first_ts.date().isoformat()
-            for proj, cnt in per_project.items():
-                quota = int(round(total_min * cnt / n_commits))
-                if quota <= 0:
-                    continue
-                conn.execute(
-                    "INSERT INTO time_entries (project, mission_id, date, source, description, minutes) "
-                    "VALUES (?,?,?,?,?,?)",
-                    (proj, None, day, "commit",
-                     f"stima-commit {github_repo}: {cnt} commit-mission", quota),
-                )
-                n += 1
+            conn.execute(
+                "INSERT INTO time_entries (project, mission_id, date, source, description, minutes) "
+                "VALUES (?,?,?,?,?,?)",
+                (repo_name, None, day, "commit",
+                 f"stima-commit {github_repo}: {len(sess)} commit-mission", total_min),
+            )
+            n += 1
     return n
 
 
