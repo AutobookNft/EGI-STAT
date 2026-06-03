@@ -3,6 +3,15 @@
 > `mission_stats` aggrega le missioni di **tutti** gli organi dell'ecosistema,
 > non solo EGI-DOC. Istituito da M-220 (2026-06-01) dopo il decoupling Oracode Nexus.
 
+> **Aggiornamento M-225 (2026-06-03) — pipeline SQLite, fonte unica.** Il rework stat (SSOT
+> `os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md`) introduce `aggregate_to_sqlite.py`: la discovery
+> ora usa **SOLO `~/oracode-engine/projects.json`** (il filesystem-walk M-220 descritto sotto è
+> **deprecato** come fonte di discovery), e il serving avviene da un **SQLite locale**
+> (`backend/data/stats.db`, gitignored) rigenerabile dai JSON registry, con **merge-union
+> cross-registry senza perdita di commit_hashes**. Il Postgres `stat.*` (incl. `mission_stats`)
+> sarà dismesso (unità S3). Questo doc resta valido per lo storico M-220; per il sistema attuale
+> vedi il SSOT STATS.
+
 ## Perché
 Prima del decoupling, tutte le missioni vivevano nel registry di EGI-DOC.
 Il decoupling ha creato registry **per-organo** (os3-matrix, oracode, Capasso,
