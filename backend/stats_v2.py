@@ -153,15 +153,25 @@ def aggregate_daily(missions=None):
     """
     conn = _connect()
     try:
+        # M-OS3-082: time-series = lavoro-mission (mission_repo_day) UNITO al pregresso storico
+        # (legacy_repo_day, commit non-mission) → i grafici si estendono ai primi commit (2023+).
+        # Additivo: se legacy_repo_day non esiste (ingest non eseguito), si degrada al solo mission.
+        has_legacy = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='legacy_repo_day'"
+        ).fetchone() is not None
+        src = "mission_repo_day"
+        if has_legacy:
+            src = ("(SELECT day,commits,lines_added,lines_deleted,files_touched FROM mission_repo_day "
+                   "UNION ALL SELECT day,commits,lines_added,lines_deleted,files_touched FROM legacy_repo_day)")
         work_rows = conn.execute(
-            """
+            f"""
             SELECT day,
                    SUM(commits)                          AS commits,
                    SUM(lines_added)                      AS lines_added,
                    SUM(lines_deleted)                    AS lines_deleted,
                    SUM(lines_added) - SUM(lines_deleted) AS lines_net,
                    SUM(files_touched)                    AS files_touched
-            FROM mission_repo_day
+            FROM {src}
             GROUP BY day
             """
         ).fetchall()

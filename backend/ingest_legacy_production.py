@@ -96,23 +96,25 @@ def _is_vendored(path):
     return False
 
 def commit_numstat(root):
-    """dict hash -> (added, deleted, files) per OGNI commit non-merge, SOLO file autorati
-    (esclusi node_modules/vendor/dist/build/lock/minified). Righe vendored NON contate."""
+    """dict hash -> (date, added, deleted, files) per OGNI commit non-merge, SOLO file autorati
+    (esclusi vendor/dump). `date` = data commit ISO (%cs) per la dimensione giornaliera (M-OS3-082)."""
     out = subprocess.run(
-        ["git", "-C", root, "log", "--all", "--no-merges", "--numstat", "--pretty=format:@%H"],
+        ["git", "-C", root, "log", "--all", "--no-merges", "--numstat", "--pretty=format:@%H|%cs"],
         capture_output=True, text=True, errors="ignore", timeout=600).stdout
-    res = {}; cur = None; a = d = f = 0
+    res = {}; cur = None; cday = None; a = d = f = 0
     for line in out.splitlines():
         if line.startswith("@"):
-            if cur is not None: res[cur] = (a, d, f)
-            cur = line[1:].strip(); a = d = f = 0
+            if cur is not None: res[cur] = (cday, a, d, f)
+            hd = line[1:].split("|", 1)
+            cur = hd[0].strip(); cday = (hd[1].strip() if len(hd) > 1 else None)
+            a = d = f = 0
         elif line.strip():
             p = line.split("\t")
             if len(p) == 3 and not _is_vendored(p[2]):
                 a += int(p[0]) if p[0].isdigit() else 0
                 d += int(p[1]) if p[1].isdigit() else 0
                 f += 1
-    if cur is not None: res[cur] = (a, d, f)
+    if cur is not None: res[cur] = (cday, a, d, f)
     return res
 
 def main():
@@ -126,15 +128,25 @@ def main():
     conn.execute("""CREATE TABLE legacy_production (
         organ TEXT PRIMARY KEY, repos TEXT, commits INTEGER, lines_added INTEGER,
         lines_deleted INTEGER, lines_net INTEGER, files_touched INTEGER, computed_at TEXT)""")
+    # M-OS3-082: dimensione GIORNALIERA (per estendere la time-series ai primi commit).
+    conn.execute("DROP TABLE IF EXISTS legacy_repo_day")
+    conn.execute("""CREATE TABLE legacy_repo_day (
+        day TEXT, organ TEXT, commits INTEGER, lines_added INTEGER,
+        lines_deleted INTEGER, files_touched INTEGER, PRIMARY KEY (day, organ))""")
 
     by_organ = {}; quad = []
+    by_day = {}  # (organ, day) -> [c,a,d,f]
     for name, root in discover_repos():
         ns = commit_numstat(root)
         total_c = len(ns); leg_c = leg_a = leg_d = leg_f = 0; miss_c = 0
-        for h, (a, d, f) in ns.items():
-            if h in mission_hashes: miss_c += 1
-            else: leg_c += 1; leg_a += a; leg_d += d; leg_f += f
         org = organ_of(name)
+        for h, (day, a, d, f) in ns.items():
+            if h in mission_hashes:
+                miss_c += 1; continue
+            leg_c += 1; leg_a += a; leg_d += d; leg_f += f
+            if day:
+                k = (org, day); b = by_day.setdefault(k, [0, 0, 0, 0])
+                b[0] += 1; b[1] += a; b[2] += d; b[3] += f
         o = by_organ.setdefault(org, {"repos": set(), "c": 0, "a": 0, "d": 0, "f": 0})
         o["repos"].add(name); o["c"] += leg_c; o["a"] += leg_a; o["d"] += leg_d; o["f"] += leg_f
         quad.append((name, total_c, miss_c, leg_c))
@@ -143,7 +155,13 @@ def main():
         conn.execute(
             "INSERT INTO legacy_production (organ,repos,commits,lines_added,lines_deleted,lines_net,files_touched,computed_at) VALUES (?,?,?,?,?,?,?,datetime('now'))",
             (org, ",".join(sorted(o["repos"])), o["c"], o["a"], o["d"], o["a"]-o["d"], o["f"]))
+    for (org, day), b in by_day.items():
+        conn.execute(
+            "INSERT OR REPLACE INTO legacy_repo_day (day,organ,commits,lines_added,lines_deleted,files_touched) VALUES (?,?,?,?,?,?)",
+            (day, org, b[0], b[1], b[2], b[3]))
     conn.commit()
+    rng = conn.execute("SELECT MIN(day),MAX(day),COUNT(*) FROM legacy_repo_day").fetchone()
+    print(f"legacy_repo_day: {rng[2]} righe, range {rng[0]} → {rng[1]}")
 
     print("\n=== PRODUZIONE LEGACY per organo (commit non-mission) ===")
     print(f"{'ORGANO':24} {'COMMIT':>7} {'RIGHE_ADD':>12} {'RIGHE_NET':>12}")
