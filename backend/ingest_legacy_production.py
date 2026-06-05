@@ -75,7 +75,7 @@ def organ_of(repo_name):
 # Integrità: contiamo solo ciò che è stato scritto davvero, non node_modules/vendor committati.
 VENDOR_SUBSTR = (
     "node_modules/", "/vendor/", "vendor/", "/dist/", "/build/", "/.next/", "/out/",
-    "public/build/", "public/dist/", "public/hot", "/storage/framework/", "bootstrap/cache/",
+    "public/build/", "public/dist/", "public/hot", "/storage/", "storage/", "bootstrap/cache/",
     "/.nuxt/", "/coverage/", "/__pycache__/", "/.venv/", "/venv/", "/site-packages/",
     # M-OS3-081 (audit): dump IDE + dizionari + librerie terze in path non-standard
     ".history/", "/.history/", "cspell", "TCPDF-main/", "/TCPDF", "/tcpdf/",
@@ -84,7 +84,16 @@ VENDOR_SUFFIX = (
     ".lock", "-lock.json", "package-lock.json", ".min.js", ".min.css", ".map",
     ".bundle.js", ".chunk.js", "composer.lock", "yarn.lock", "pnpm-lock.yaml",
     "Gemfile.lock", "poetry.lock", "go.sum",
+    # M-OS3-084: ASSET non-codice (immagini vettoriali/font/icone). Un .svg con immagine embedded
+    # può valere centinaia di migliaia di righe (es. logo_egi.svg = 356k righe) → NON è codice autorato.
+    ".svg", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".otf",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".mp4", ".webm", ".mov",
 )
+
+# Cap per-file-per-commit: nessun file di CODICE scritto a mano aggiunge più di ~10k righe in UN commit.
+# Oltre = dump/dataset/generato (es. JSON scrapati di 525k righe, HTML debug) → NON conta come autorato.
+# Difesa GENERALE oltre alle estensioni note (cattura i dump qualunque sia l'estensione). M-OS3-084.
+FILE_LINE_CAP = 10000
 
 def _is_vendored(path):
     p = path.strip()
@@ -111,7 +120,10 @@ def commit_numstat(root):
         elif line.strip():
             p = line.split("\t")
             if len(p) == 3 and not _is_vendored(p[2]):
-                a += int(p[0]) if p[0].isdigit() else 0
+                aa = int(p[0]) if p[0].isdigit() else 0
+                if aa > FILE_LINE_CAP:
+                    continue  # dump/dataset/generato: non è codice autorato
+                a += aa
                 d += int(p[1]) if p[1].isdigit() else 0
                 f += 1
     if cur is not None: res[cur] = (cday, a, d, f)
