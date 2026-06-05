@@ -110,7 +110,7 @@ SCHEMA = [
 
     # 6) time_entries — asse ORE (M-234): minuti per (progetto, sorgente).
     #    manual = dato reale CEO (TIME_ENTRIES.json). commit = stima-euristica
-    #    sui timestamp dei SOLI commit-mission (principio esclusivita mission).
+    #    sui timestamp di TUTTI i commit del repo (asse ORE all-time, M-OS3-085).
     """CREATE TABLE time_entries (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         project     TEXT    NOT NULL,            -- nome progetto (chiave aggregazione ore)
@@ -364,9 +364,9 @@ def load_time_entries_manual(conn, instances):
 
 
 def estimate_commit_minutes(conn, instances):
-    """Stima-COMMIT (M-234): euristica sessioni sui timestamp dei SOLI commit-mission.
+    """Stima-COMMIT (M-234): euristica sessioni sui timestamp dei SOLI commit.
 
-    Principio esclusivita mission: contano SOLO i commit-hash gia in mission_commits.
+    ALL-TIME (M-OS3-085): contano TUTTI i commit del repo; mission_commits resta solo come guardia (se 0 mission, stima non parte).
     Attribuzione progetto = il REPO REALE dove vive il commit (github_repo normalizzato),
     NON l'organo scalare della mission (fix M-239: l'organo scalare valeva sempre 'EGI-DOC'
     per le missioni FlorenceEGI → schiacciava tutti gli organi in 'FlorenceEGI' e perdeva
@@ -411,10 +411,14 @@ def estimate_commit_minutes(conn, instances):
             ).stdout
         except Exception:
             continue
-        commits = []  # list[datetime] dei commit-mission di questo repo
+        # M-OS3-085: asse ORE ALL-TIME — conta TUTTI i commit del repo (un commit = un momento di
+        # lavoro, a prescindere dai file). Prima filtrava `h in mission_hashes` → ore solo era-mission
+        # (il monitor Ore/Progetto non mostrava i totali di sempre). Le ore sono tempo-al-lavoro, non
+        # produzione: nessun filtro vendor/asset qui (quello vale solo per le RIGHE di codice).
+        commits = []  # list[datetime] di TUTTI i commit del repo
         for line in out.splitlines():
             h, _, iso = line.partition(" ")
-            if h in mission_hashes and iso:
+            if iso:
                 try:
                     commits.append(datetime.fromisoformat(iso))
                 except ValueError:
@@ -455,7 +459,7 @@ def estimate_commit_minutes(conn, instances):
                 "INSERT INTO time_entries (project, mission_id, date, source, description, minutes) "
                 "VALUES (?,?,?,?,?,?)",
                 (repo_name, None, day, "commit",
-                 f"stima-commit {github_repo}: {len(sess)} commit-mission", total_min),
+                 f"stima-commit {github_repo}: {len(sess)} commit", total_min),
             )
             n += 1
     return n
