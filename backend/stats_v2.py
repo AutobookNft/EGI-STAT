@@ -546,9 +546,26 @@ def summary_stats(missions=None):
                 f"SELECT organ, COUNT(*) n FROM missions WHERE {_CLOSED_WHERE} GROUP BY organ"
             ).fetchall()
         }
+        mission_added = conn.execute(
+            f"SELECT COALESCE(SUM(lines_added),0) la, COALESCE(SUM(lines_added)-SUM(lines_deleted),0) ln FROM missions WHERE {_CLOSED_WHERE}"
+        ).fetchone()
+        # ── Produzione STORICA legacy (M-OS3-081): commit pre/non-mission, per organo. ──
+        # Additivo: NON altera i conteggi mission (policy: da ora conta solo il lavoro in mission).
+        # È il record storico (commit = fonte di verità) della produzione totale di Florence EGI Srl.
+        legacy_by_organ = {}; leg_c = leg_a = leg_n = 0
+        try:
+            for r in conn.execute(
+                "SELECT organ, commits, lines_added, lines_net FROM legacy_production ORDER BY lines_added DESC"
+            ).fetchall():
+                legacy_by_organ[r["organ"]] = {"commits": r["commits"], "lines_added": r["lines_added"], "lines_net": r["lines_net"]}
+                leg_c += r["commits"] or 0; leg_a += r["lines_added"] or 0; leg_n += r["lines_net"] or 0
+        except sqlite3.OperationalError:
+            pass  # tabella assente → degrada pulito
     finally:
         conn.close()
 
+    m_added = mission_added["la"] if mission_added else 0
+    m_net = mission_added["ln"] if mission_added else 0
     return {
         "total_missions": agg["total_missions"],
         "total_commits": agg["total_commits"],
@@ -559,4 +576,13 @@ def summary_stats(missions=None):
         "avg_productivity_index": agg["avg_productivity_index"],
         "missions_by_type": by_type,
         "missions_by_organ": by_organ,
+        # ── Asse storico (additivo, M-OS3-081) ──
+        "legacy_commits": leg_c,
+        "legacy_lines_added": leg_a,
+        "legacy_lines_net": leg_n,
+        "legacy_by_organ": legacy_by_organ,
+        # Produzione TOTALE = mission + legacy (prova storica commit-based)
+        "total_production_commits": (agg["total_commits"] or 0) + leg_c,
+        "total_production_lines_added": m_added + leg_a,
+        "total_production_lines_net": m_net + leg_n,
     }
