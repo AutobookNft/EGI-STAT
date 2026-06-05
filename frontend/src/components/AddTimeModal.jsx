@@ -73,6 +73,7 @@ export default function AddTimeModal() {
             <th style={{ padding: '8px' }}>Ore</th>
             <th style={{ padding: '8px' }}>Min. manuali</th>
             <th style={{ padding: '8px' }}>Min. stima-commit</th>
+            <th style={{ padding: '8px' }}>Righe nette</th>
           </tr>
         </thead>
         <tbody>
@@ -82,10 +83,11 @@ export default function AddTimeModal() {
               <td style={{ padding: '8px', fontWeight: 'bold', color: '#00cec9' }}>{h.hours}</td>
               <td style={{ padding: '8px' }}>{h.manual_minutes}</td>
               <td style={{ padding: '8px', color: '#888' }}>{h.commit_minutes}</td>
+              <td style={{ padding: '8px', fontWeight: 'bold', color: '#a29bfe' }}>{(h.lines_net ?? 0).toLocaleString('it-IT')}</td>
             </tr>
           ))}
           {hours.length === 0 && (
-            <tr><td colSpan={4} style={{ padding: '8px', color: '#888' }}>Nessuna voce ore.</td></tr>
+            <tr><td colSpan={5} style={{ padding: '8px', color: '#888' }}>Nessuna voce ore.</td></tr>
           )}
         </tbody>
       </table>

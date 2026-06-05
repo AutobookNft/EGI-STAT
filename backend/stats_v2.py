@@ -501,18 +501,40 @@ def hours_by_project():
             ORDER BY total_minutes DESC
             """
         ).fetchall()
+        # M-OS3-086: righe NETTE per progetto = produzione mission + produzione legacy storica
+        # (la PROVA di produzione accanto alle ore). Chiave = organ canonico (== project di time_entries).
+        # chiave LOWERCASE: l'asse ore usa il nome-repo GitHub (es. 'egi-credential'), mentre
+        # missions/legacy usano il basename cartella (es. 'EGI-Credential') → match case-insensitive.
+        net_mission, add_mission = {}, {}
+        for r in conn.execute(
+            f"SELECT organ, COALESCE(SUM(lines_net),0) ln, COALESCE(SUM(lines_added),0) la FROM missions WHERE {_CLOSED_WHERE} GROUP BY organ"):
+            k = (r["organ"] or "").lower()
+            net_mission[k] = net_mission.get(k, 0) + (r["ln"] or 0)
+            add_mission[k] = add_mission.get(k, 0) + (r["la"] or 0)
+        net_legacy, add_legacy = {}, {}
+        try:
+            for r in conn.execute("SELECT organ, lines_net, lines_added FROM legacy_production"):
+                k = (r["organ"] or "").lower()
+                net_legacy[k] = net_legacy.get(k, 0) + (r["lines_net"] or 0)
+                add_legacy[k] = add_legacy.get(k, 0) + (r["lines_added"] or 0)
+        except sqlite3.OperationalError:
+            pass  # legacy_production assente → solo mission
     finally:
         conn.close()
 
     out = []
     for r in rows:
         tot = r["total_minutes"] or 0
+        p = r["project"]; pk = (p or "").lower()
         out.append({
-            "project": r["project"],
+            "project": p,
             "minutes": tot,
             "hours": round(tot / 60.0, 2),
             "manual_minutes": r["manual_minutes"] or 0,
             "commit_minutes": r["commit_minutes"] or 0,
+            # righe nette/aggiunte TOTALI (mission + legacy storico) — prova di produzione per progetto
+            "lines_net": net_mission.get(pk, 0) + net_legacy.get(pk, 0),
+            "lines_added": add_mission.get(pk, 0) + add_legacy.get(pk, 0),
         })
     return out
 
