@@ -188,7 +188,7 @@ def get_mission_stats():
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
 
-    limit = request.args.get('limit', 50, type=int)
+    limit = request.args.get('limit', 1000, type=int)
     mission_type = request.args.get('type')
     organ = request.args.get('organ')
 
@@ -308,7 +308,7 @@ def get_v2_weekly():
     try:
         daily = aggregate_daily()
         data = aggregate_weekly(daily)
-        limit = request.args.get('limit', 50, type=int)
+        limit = request.args.get('limit', 1000, type=int)
         return jsonify(data[-limit:])
     except Exception as e:
         return jsonify({"error": str(e)}), 500

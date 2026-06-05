@@ -16,7 +16,7 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v2/stats/weekly`);
+        const response = await fetch(`${API_BASE_URL}/api/v2/stats/weekly?limit=1000`);
         if (response.ok) {
           const data = await response.json();
           if (data && data.length > 0) {
@@ -42,10 +42,16 @@ function App() {
     fetchData();
   }, []);
 
+  // Anni disponibili dai dati (period = "YYYY-Www") — M-OS3-083: filtro per-anno sulla storia 2023→oggi
+  const years = [...new Set(allStats.map(s => String(s.name).slice(0, 4)))].sort();
+
   const handleTimeRange = (weeks) => {
     setTimeRange(weeks);
     if (weeks === 'all') {
       setStats(allStats);
+    } else if (typeof weeks === 'string' && /^\d{4}$/.test(weeks)) {
+      // filtro per anno: tutte le settimane di quell'anno
+      setStats(allStats.filter(s => String(s.name).startsWith(weeks)));
     } else {
       setStats(allStats.slice(-weeks));
     }
@@ -82,6 +88,11 @@ function App() {
           <button className={`filter-btn ${timeRange === 'all' ? 'active' : ''}`} onClick={() => handleTimeRange('all')}>
             Tutte
           </button>
+          {years.map(y => (
+            <button key={y} className={`filter-btn ${timeRange === y ? 'active' : ''}`} onClick={() => handleTimeRange(y)}>
+              {y}
+            </button>
+          ))}
         </div>
 
         <div className="metrics-grid">
