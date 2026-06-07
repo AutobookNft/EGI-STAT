@@ -22,6 +22,40 @@ SCAN_ROOTS = ["/home/fabio", "/tmp/oracode"]
 PROJECTS_JSON = "/home/fabio/oracode-engine/projects.json"
 PRUNE_DIRS = {"node_modules", ".git", "vendor", ".next", "dist", "build", "__pycache__"}
 
+# ── Tassonomia status SINGLE-SOURCE (M-OS3-090) ────────────────────────────────
+# Verità unica degli status mission: oracode/templates/MISSION_STATUS_TAXONOMY.json.
+# LOUD-ON-UNKNOWN: uno status engine non mappato NON viene scartato in silenzio —
+# viene registrato in UNKNOWN_STATUSES + segnalato a stderr, così la regressione
+# (nuovo status non mappato) si fa SENTIRE invece di sparire dalle stat.
+STATUS_TAXONOMY_PATH = "/home/fabio/oracode/templates/MISSION_STATUS_TAXONOMY.json"
+UNKNOWN_STATUSES = set()
+
+
+def _load_status_taxonomy():
+    try:
+        return json.loads(Path(STATUS_TAXONOMY_PATH).read_text()).get("statuses", {})
+    except Exception as e:
+        sys.stderr.write(f"⚠⚠ M-OS3-090: MISSION_STATUS_TAXONOMY.json illeggibile ({e}) — fallback minimo\n")
+        return {"closed": {"counts_as_production": True},
+                "closed_with_debt": {"counts_as_production": True},
+                "completed": {"counts_as_production": True}}
+
+
+STATUS_TAXONOMY = _load_status_taxonomy()
+
+
+def status_counts_as_production(raw_status):
+    """True se lo status conta come produzione. Loud-on-unknown: status non in
+    tassonomia → registrato in UNKNOWN_STATUSES + stderr, ritorna False ma MAI in silenzio."""
+    if raw_status in STATUS_TAXONOMY:
+        return bool(STATUS_TAXONOMY[raw_status].get("counts_as_production"))
+    UNKNOWN_STATUSES.add(raw_status)
+    sys.stderr.write(
+        f"⚠⚠ STATUS SCONOSCIUTO '{raw_status}' — assente da MISSION_STATUS_TAXONOMY.json. "
+        f"Mission NON conteggiata finché non lo mappi. AGGIORNA la tassonomia! (M-OS3-090 loud-on-unknown)\n"
+    )
+    return False
+
 
 def _project_root(registry_path):
     """dir-progetto = parent di docs/ (.../EGI-DOC/docs/missions/REG.json → .../EGI-DOC)."""
@@ -145,8 +179,18 @@ def normalize_mission(m):
                           date_open / date_close / trigger_matrix  (no stats)
     """
     mid = m.get("mission_id") or m.get("id")
-    completed = (m.get("stato") == "completed") or (m.get("status") == "closed")
-    if not mid or not completed:
+    if not mid:
+        return None
+    # Engine-EN ('status'): passa per la tassonomia single-source → loud-on-unknown
+    # (un nuovo status non mappato GRIDA, non sparisce). Legacy-IT ('stato'): vocabolario
+    # frozen, conta solo 'completed' (nessun rumore sui legacy aperti).
+    status = m.get("status")
+    if status:
+        if not status_counts_as_production(status):
+            return None
+    elif m.get("stato") == "completed":
+        pass  # legacy completata ≡ closed
+    else:
         return None
 
     title = m.get("titolo") or m.get("title") or mid
