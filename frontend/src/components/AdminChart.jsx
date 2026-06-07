@@ -9,6 +9,7 @@ import {
     ResponsiveContainer,
     LabelList
 } from 'recharts';
+import { formatChartLabel } from '../lib/formatChartLabel.js';
 
 /**
  * AdminChart - A strict "Scientific/Admin" style chart component.
@@ -109,7 +110,7 @@ const AdminChart = ({
                 activeDot={{ r: 6, fill: color, stroke: "white" }}
                 isAnimationActive={false}
             >
-                <LabelList position="top" offset={10} fontSize={10} formatter={(v) => typeof v === 'number' ? Math.round(v).toLocaleString() : v} />
+                <LabelList position="top" offset={10} fontSize={10} formatter={formatChartLabel} />
             </Line>
         </LineChart>
     );
