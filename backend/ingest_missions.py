@@ -65,7 +65,7 @@ REPO_TO_DIR = {
     "florenceegi/oracode":              "/home/fabio/oracode",
     "florenceegi/YURI-BIAGINI":         "/home/fabio/YURI-BIAGINI",
     "florenceegi/la-bottega":           "/home/fabio/LA-BOTTEGA",
-    "florenceegi/fabiocherici":         "/home/fabio/FABIO-CHERICI-SITE",
+    "florenceegi/fabiocherici":         "/home/fabio/fabiocherici.com",
     "florenceegi/creator-staging":      "/home/fabio/CREATOR-STAGING",
     "florenceegi/gialloro-firenze":     "/home/fabio/GIALLORO-FIRENZE",
     "florenceegi/gialloro-firenze-cms": "/home/fabio/GIALLORO-FIRENZE-CMS",

@@ -79,7 +79,7 @@ PROJECT_REPO = {
     "YURI-BIAGINI":         ("/home/fabio/YURI-BIAGINI",        "florenceegi/YURI-BIAGINI"),
     "LA-BOTTEGA":           ("/home/fabio/LA-BOTTEGA",          "florenceegi/la-bottega"),
     "La Bottega":           ("/home/fabio/LA-BOTTEGA",          "florenceegi/la-bottega"),
-    "FABIO-CHERICI":        ("/home/fabio/FABIO-CHERICI-SITE",  "florenceegi/fabiocherici"),
+    "FABIO-CHERICI":        ("/home/fabio/fabiocherici.com",  "florenceegi/fabiocherici"),
     "CREATOR-STAGING":      ("/home/fabio/CREATOR-STAGING",     "florenceegi/creator-staging"),
     "GIALLORO-FIRENZE":     ("/home/fabio/GIALLORO-FIRENZE",    "florenceegi/gialloro-firenze"),
     "GIALLORO-FIRENZE-CMS": ("/home/fabio/GIALLORO-FIRENZE-CMS","florenceegi/gialloro-firenze-cms"),
