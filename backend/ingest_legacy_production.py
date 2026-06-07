@@ -65,7 +65,7 @@ def discover_repos():
 
 def organ_of(repo_name):
     """Organo = nome repo canonicalizzato. Alias noti; 'miscellania-generica' per tooling sciolto."""
-    alias = {"Capasso": "pinocapasso", "LeVespe-DOC": "le-vespe-cafe", "DeepDebug-DOC": "DeepDebug"}
+    alias = {"Capasso": "pinocapasso", "LeVespe-DOC": "le-vespe-cafe", "DeepDebug-DOC": "DeepDebug", "fabiocherici.com": "fabiocherici"}
     misc = {"book-to-skill", "Padmin_Analyzer", "Olafur"}
     if repo_name in misc:
         return "miscellania-generica"
