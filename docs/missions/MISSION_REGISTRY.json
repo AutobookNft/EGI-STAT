@@ -1,0 +1,175 @@
+{
+  "_meta": {
+    "description": "Mission Registry per-organo — EGI-STAT (M-OS3-096)",
+    "organ": "EGI-STAT",
+    "id_prefix": "M-STAT",
+    "version": "1.0.0",
+    "created": "2026-06-07",
+    "note": "Mission mono-organo migrate dal centrale EGI-DOC. ID storici preservati; nuove mission usano id_prefix.",
+    "updated": "2026-06-07"
+  },
+  "missions": [
+    {
+      "id": "M-244",
+      "title": "Deploy PI v3 al serving: grafico Indice Produttivita usa throughput (no re-ingest, reversibile)",
+      "trigger_matrix": 2,
+      "status": "executing",
+      "date_open": "2026-06-07",
+      "date_close": null,
+      "scope_hash": "a96ea6306a13eaa48a859e0203087dd280add680f79f655670445df08c75c5d3",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-07T18:07:07.832Z"
+    },
+    {
+      "id": "M-243",
+      "title": "PI affidabile: ricerca fonti (SPACE/DORA/DevEx) + skill dev-productivity-metrics + redesign algoritmo Indice Produttivita",
+      "trigger_matrix": 3,
+      "status": "closed",
+      "date_open": "2026-06-07",
+      "date_close": "2026-06-07",
+      "scope_hash": "9f363cfd9735d8d3b315fbaa07e3a5b8fcdbfe4534a3f2ba811b9a27402e56b1",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-07T17:37:11.297Z",
+      "report_tecnico": "docs/missions/M-243.md",
+      "report_esteso": "docs/missions/M-243_FULL.md",
+      "report_technical": "docs/missions/M-243.md",
+      "report_extended": "docs/missions/M-243_FULL.md",
+      "stats": {
+        "total_commits": 1,
+        "lines_added": 476,
+        "lines_deleted": 0,
+        "lines_net": 476,
+        "lines_touched": 476,
+        "files_touched": 10,
+        "weighted_commits": 1,
+        "cognitive_load": 2.54,
+        "productivity_index": 22.65,
+        "tags_breakdown": {
+          "FEAT": 1
+        },
+        "commit_hashes": [
+          "31a6556d95de69c8c7c5c2380203113034373d06"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-07",
+            "commits": 1,
+            "lines_added": 476,
+            "lines_deleted": 0,
+            "files_touched": 10,
+            "tags": {
+              "FEAT": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-07"
+      },
+      "organs": [
+        "EGI-STAT"
+      ],
+      "retrospective_executed": true,
+      "retrospective_executed_at": "2026-06-07T17:54:37Z"
+    },
+    {
+      "id": "M-224",
+      "title": "EGI-STAT stats_v2 multi-registry — grafici v2 dalla tabella mission_stats (tutti gli organi)",
+      "type": "architecture",
+      "trigger_matrix": 3,
+      "status": "aborted",
+      "date_open": "2026-06-01",
+      "date_close": "2026-06-03",
+      "scope_hash": "2761412b5d57a10b4d59b7adb709d0d382ce9b576ac28973685492a0ae749a05",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-03T13:00:41.361Z",
+      "organs": [
+        "EGI-STAT"
+      ]
+    },
+    {
+      "mission_id": "M-049",
+      "titolo": "Fix EGI-STAT ingester: escludere file auto-generati dal conteggio",
+      "data_apertura": "2026-04-12",
+      "data_chiusura": "2026-04-12",
+      "stato": "completed",
+      "tipo_missione": "bugfix",
+      "organi_coinvolti": [
+        "EGI-STAT"
+      ],
+      "cross_organo": false,
+      "doc_sync_executed": false,
+      "doc_verified": false,
+      "doc_verified_date": null,
+      "files_modified": [
+        "EGI-STAT/backend/core/github_client.py"
+      ],
+      "report_tecnico": "missions/M-049_EGISTAT_NOISE_FILTER.md",
+      "report_esteso": "missions/M-049_EGISTAT_NOISE_FILTER_FULL.md",
+      "stats": {
+        "total_commits": 5,
+        "lines_added": 2548,
+        "lines_deleted": 3109,
+        "lines_net": -561,
+        "lines_touched": 5657,
+        "files_touched": 29,
+        "weighted_commits": 5.5,
+        "cognitive_load": 3.31,
+        "productivity_index": 43.69,
+        "tags_breakdown": {
+          "FIX": 1,
+          "DOC": 3,
+          "ARCH": 1
+        },
+        "commit_hashes": [
+          "11de33f75783d98ab36f4b9e488fd1dce4a30d00",
+          "78b82bdead45e952f0adfafebd3db5463c2e8ea7",
+          "9b9849e89eec3aba82a9a4e40aea21dd20a64642",
+          "ce95fa8354db2c5d0381dff8f4a8bd07d7375425",
+          "f271d694600ae9bd1f133e07c49f714ac95946f9"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-04-12",
+            "commits": 1,
+            "lines_added": 32,
+            "lines_deleted": 13,
+            "files_touched": 1,
+            "tags": {
+              "FIX": 1
+            }
+          },
+          {
+            "repo": "florenceegi/EGI-DOC",
+            "date": "2026-04-12",
+            "commits": 3,
+            "lines_added": 2278,
+            "lines_deleted": 10,
+            "files_touched": 10,
+            "tags": {
+              "DOC": 3
+            }
+          },
+          {
+            "repo": "florenceegi/oracode",
+            "date": "2026-06-01",
+            "commits": 1,
+            "lines_added": 238,
+            "lines_deleted": 3086,
+            "files_touched": 18,
+            "tags": {
+              "ARCH": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-07"
+      },
+      "organs": [
+        "EGI-DOC",
+        "EGI-STAT",
+        "oracode"
+      ]
+    }
+  ],
+  "counter": 244
+}

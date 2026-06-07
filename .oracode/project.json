@@ -1,20 +1,19 @@
 {
   "_meta": {
-    "description": "Descrittore Oracode — ponte L1->L3 per l'organo EGI-STAT. EGI-STAT e un ORGANO della istanza FlorenceEGI (cervello documentale EGI-DOC), NON un LSO autonomo: le sue mission, stats e DOC-SYNC vivono nella istanza centrale EGI-DOC. Questo descrittore esiste solo perche il repo EGI-STAT e una working-dir separata: senza di esso, bin/mission lanciato da /home/fabio/EGI-STAT non risale ad alcun .oracode/project.json e le mission non si auto-registrano (regressione mission fantasma). instance_root e tutti i path puntano a EGI-DOC: la numerazione resta nella sequenza globale M-NNN (id_prefix null). Creato 2026-06-07.",
+    "description": "Descrittore progetto Oracode — M-OS3-096 (per-organo)",
     "version": "1.0.0",
     "created": "2026-06-07"
   },
-  "project": "FlorenceEGI",
-  "organ": "EGI-STAT",
-  "level": 2,
-  "id_prefix": null,
-  "instance_root": "/home/fabio/EGI-DOC",
-  "registry_path": "/home/fabio/EGI-DOC/docs/missions/MISSION_REGISTRY.json",
-  "repo_map_path": "/home/fabio/EGI-DOC/docs/missions/REPO_MAP.json",
-  "read_log_path": "/home/fabio/EGI-DOC/audit/MISSION_READ_LOG.jsonl",
-  "bootstrap_index_path": "/home/fabio/EGI-DOC/docs/missions/MISSION_BOOTSTRAP_INDEX.json",
-  "stats_refresh_cmd": [
-    "/home/fabio/EGI-STAT/backend/.venv/bin/python",
-    "/home/fabio/EGI-STAT/backend/aggregate_to_sqlite.py"
-  ]
+  "project": "EGI-STAT",
+  "canonical_name": "EGI-STAT",
+  "aliases": [
+    "EGI-STAT"
+  ],
+  "id_prefix": "M-STAT",
+  "level": 3,
+  "instance_root": "/home/fabio/EGI-STAT",
+  "registry_path": "/home/fabio/EGI-STAT/docs/missions/MISSION_REGISTRY.json",
+  "repo_map_path": "/home/fabio/EGI-STAT/docs/missions/REPO_MAP.json",
+  "read_log_path": "/home/fabio/EGI-STAT/audit/MISSION_READ_LOG.jsonl",
+  "bootstrap_index_path": "/home/fabio/EGI-STAT/docs/missions/MISSION_BOOTSTRAP_INDEX.json"
 }
