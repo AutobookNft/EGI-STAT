@@ -26,6 +26,11 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime
 
+# M-244: Indice Produttività v3 (throughput-aware). Il valore per-missione è
+# calcolato al serving dalle colonne grezze (log1p, pesi espliciti, no cap),
+# senza re-ingest. Vedi skill dev-productivity-metrics/chapters/ch06.
+import productivity_v3 as _v3
+
 # Sorgente UNICA: lo SQLite serving locale (rigenerabile dai registry JSON via
 # aggregate_to_sqlite.py). Override per i test via env STATS_DB_PATH.
 DB_PATH = os.getenv(
@@ -176,42 +181,72 @@ def aggregate_daily(missions=None):
             """
         ).fetchall()
 
-        closed_rows = conn.execute(
+        # M-244: per-missione (non più aggregato in SQL) per poter calcolare il
+        # valore v3 dalle colonne grezze e poi sommarlo/mediarlo per giorno.
+        mission_rows = conn.execute(
             f"""
-            SELECT date_closed              AS day,
-                   COUNT(*)                 AS missions_closed,
-                   AVG(cognitive_load)      AS avg_cognitive_load,
-                   AVG(productivity_index)  AS avg_productivity_index,
-                   SUM(weighted_commits)    AS weighted_commits,
-                   GROUP_CONCAT(id)         AS mission_ids
+            SELECT id, date_closed AS day, cognitive_load, productivity_index,
+                   weighted_commits, lines_added, lines_deleted,
+                   files_touched, total_commits
             FROM missions
             WHERE {_CLOSED_WHERE}
-            GROUP BY date_closed
             """
+        ).fetchall()
+        tag_rows = conn.execute(
+            "SELECT mission_id, tag, count FROM mission_tags"
         ).fetchall()
     finally:
         conn.close()
 
+    tags_by_mission = defaultdict(dict)
+    for t in tag_rows:
+        tags_by_mission[t["mission_id"]][t["tag"]] = t["count"]
+
     work = {r["day"]: r for r in work_rows}
-    closed = {r["day"]: r for r in closed_rows}
+
+    # Raggruppa le missioni chiuse per giorno calcolando il valore v3 per-missione.
+    closed = defaultdict(lambda: {
+        "missions_closed": 0, "cl_sum": 0.0, "pi_sum": 0.0,
+        "weighted": 0.0, "v3_sum": 0.0, "ids": [],
+    })
+    for m in mission_rows:
+        value = _v3.mission_value({
+            "lines_added": m["lines_added"] or 0,
+            "lines_deleted": m["lines_deleted"] or 0,
+            "files": m["files_touched"] or 0,
+            "commits": m["total_commits"] or 0,
+            "dominant_tag": _dominant_tag(tags_by_mission.get(m["id"], {})),
+        })
+        b = closed[m["day"]]
+        b["missions_closed"] += 1
+        b["cl_sum"] += m["cognitive_load"] or 0
+        b["pi_sum"] += m["productivity_index"] or 0
+        b["weighted"] += m["weighted_commits"] or 0
+        b["v3_sum"] += value
+        b["ids"].append(m["id"])
 
     result = []
     all_days = sorted(set(work.keys()) | set(closed.keys()))
     for day in all_days:
         w = work.get(day)
         c = closed.get(day)
+        mc = c["missions_closed"] if c else 0
         result.append({
             "date": day,
             "commits": w["commits"] if w else 0,
-            "weighted_commits": round(c["weighted_commits"], 2) if c and c["weighted_commits"] is not None else 0,
+            "weighted_commits": round(c["weighted"], 2) if c else 0,
             "lines_net": w["lines_net"] if w else 0,
             "lines_added": w["lines_added"] if w else 0,
             "lines_deleted": w["lines_deleted"] if w else 0,
             "files_touched": w["files_touched"] if w else 0,
-            "missions_closed": c["missions_closed"] if c else 0,
-            "avg_cognitive_load": round(c["avg_cognitive_load"], 2) if c and c["avg_cognitive_load"] is not None else 0,
-            "avg_productivity_index": round(c["avg_productivity_index"], 2) if c and c["avg_productivity_index"] is not None else 0,
-            "missions": c["mission_ids"].split(",") if c and c["mission_ids"] else [],
+            "missions_closed": mc,
+            "avg_cognitive_load": round(c["cl_sum"] / mc, 2) if mc else 0,
+            "avg_productivity_index": round(c["pi_sum"] / mc, 2) if mc else 0,
+            # M-244: throughput = "quanto prodotto" (somma valore v3, scala col volume);
+            # intensity = "quanto denso/qualificato" (media per missione).
+            "productivity_throughput": round(c["v3_sum"], 2) if c else 0,
+            "productivity_intensity": round(c["v3_sum"] / mc, 2) if mc else 0,
+            "missions": c["ids"] if c else [],
         })
     return result
 
@@ -234,6 +269,7 @@ def _aggregate_period(daily_data, key_fn):
         "lines_net": 0, "lines_added": 0, "lines_deleted": 0,
         "files_touched": 0, "missions_closed": 0,
         "cl_sum": 0.0, "pi_sum": 0.0, "cl_count": 0,
+        "thru_sum": 0.0,  # M-244: throughput v3 (additivo tra i giorni)
     })
 
     for d in daily_data:
@@ -246,6 +282,7 @@ def _aggregate_period(daily_data, key_fn):
         b["lines_deleted"] += d["lines_deleted"]
         b["files_touched"] += d["files_touched"]
         b["missions_closed"] += d["missions_closed"]
+        b["thru_sum"] += d.get("productivity_throughput", 0)  # M-244
         if d["missions_closed"] > 0:
             b["cl_sum"] += d["avg_cognitive_load"] * d["missions_closed"]
             b["pi_sum"] += d["avg_productivity_index"] * d["missions_closed"]
@@ -268,6 +305,10 @@ def _aggregate_period(daily_data, key_fn):
             "missions_closed": b["missions_closed"],
             "avg_cognitive_load": round(b["cl_sum"] / mc, 2),
             "avg_productivity_index": round(b["pi_sum"] / mc, 2),
+            # M-244: throughput = somma del valore prodotto nel periodo ("quanto");
+            # intensity = throughput medio per missione ("quanto denso").
+            "productivity_throughput": round(b["thru_sum"], 2),
+            "productivity_intensity": round(b["thru_sum"] / mc, 2),
         }
         # alias 'week' SOLO sul weekly (Pilastro 3: sul monthly sarebbe un month-key fuorviante).
         # Il frontend consuma 'period'; 'week' soddisfa il contratto del test M-226.

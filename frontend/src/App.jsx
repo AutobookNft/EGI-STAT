@@ -22,7 +22,10 @@ function App() {
           if (data && data.length > 0) {
             const chartData = data.map(row => ({
               name: row.period,
-              pi: Math.round(row.avg_productivity_index * 10) / 10,
+              // M-244: l'Indice Produttività ora è il THROUGHPUT (quanto prodotto,
+              // scala col volume), non più la media per-missione (throughput-blind).
+              pi: Math.round((row.productivity_throughput ?? 0) * 10) / 10,
+              pi_intensity: Math.round((row.productivity_intensity ?? 0) * 100) / 100,
               cl: Math.round(row.avg_cognitive_load * 100) / 100,
               missions: row.missions_closed,
               weighted: Math.round(row.weighted_commits * 10) / 10,
@@ -99,9 +102,9 @@ function App() {
           <div className="chart-card glass-panel">
             <div className="card-header">
               <div className="icon-box primary"><TrendingUp /></div>
-              <h2>Indice Produttività</h2>
+              <h2>Indice Produttività (Output settimanale)</h2>
             </div>
-            <AdminChart data={stats} dataKey="pi" yLabel="PI" color="#000000" scrollable={true} />
+            <AdminChart data={stats} dataKey="pi" yLabel="Output" color="#000000" scrollable={true} />
           </div>
 
           <div className="chart-card glass-panel">
