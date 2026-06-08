@@ -13,6 +13,19 @@ dotenv.load_dotenv(env_path)
 app = Flask(__name__)
 CORS(app)
 
+
+# M-249: le statistiche sono dati VIVI (auto-refresh dai registry). Senza header
+# anti-cache il browser ricicla la risposta vecchia anche al reload → la dashboard
+# sembra "rotta/ferma" con dati stale. no-store forza il browser a ri-scaricare
+# sempre le metriche correnti. Niente più "hard refresh" manuale.
+@app.after_request
+def _no_store_api(resp):
+    if request.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
+
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_DATABASE")
