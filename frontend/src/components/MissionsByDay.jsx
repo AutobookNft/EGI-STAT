@@ -55,8 +55,9 @@ export default function MissionsByDay() {
   });
   const monthTotal = monthDays.reduce((s, d) => s + d.total, 0);
 
-  const th = { padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' };
-  const stick = { position: 'sticky', left: 0, background: '#1a1a1a' };
+  const th = { padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap', color: '#222' };
+  // Prima colonna sticky: sfondo opaco chiaro + testo scuro leggibile (card a tema chiaro).
+  const stick = { position: 'sticky', left: 0, background: '#fff', color: '#222', fontWeight: 600 };
 
   return (
     <div className="chart-card glass-panel" style={{ gridColumn: '1 / -1' }}>
