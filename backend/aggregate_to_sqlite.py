@@ -483,6 +483,46 @@ def write_meta(conn, registries_count, missions_count, organs, per_organ):
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)", (k, v))
 
 
+# ── Freshness / auto-refresh (M-247: anti-staleness) ──────────────────────────
+def source_files():
+    """Tutti i file sorgente da cui dipende il serving: l'indice projects.json +
+    ogni MISSION_REGISTRY scoperto. Se uno di questi è più recente del DB, il DB
+    è stale e va rigenerato. (P0-3: dipendenza esplicita, niente assunzioni.)"""
+    srcs = []
+    idx = os.path.expanduser("~/oracode-engine/projects.json")
+    if os.path.isfile(idx):
+        srcs.append(idx)
+    for registry_path, _organ in discover_registries_from_index():
+        if os.path.isfile(registry_path):
+            srcs.append(registry_path)
+    return srcs
+
+
+def is_stale(db_path):
+    """True se il DB non esiste o se una qualunque sorgente è più recente di lui."""
+    db_path = str(db_path)
+    if not os.path.isfile(db_path):
+        return True
+    db_mtime = os.path.getmtime(db_path)
+    for s in source_files():
+        try:
+            if os.path.getmtime(s) > db_mtime:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def ensure_fresh(db_path, verbose=False):
+    """Rigenera il DB SE stale, altrimenti no-op. È il guard che rende il serving
+    sempre allineato ai registry: chiamato a ogni lettura della dashboard, la
+    statistica non può più essere vecchia. Ritorna True se ha ricostruito."""
+    if is_stale(db_path):
+        aggregate(db_path, verbose=verbose)
+        return True
+    return False
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 def aggregate(db_path, verbose=False):
     db_path = Path(db_path)

@@ -44,12 +44,27 @@ DB_PATH = os.getenv(
 _CLOSED_WHERE = "date_closed IS NOT NULL AND date_closed != '' AND date_closed != 'pending'"
 
 
+def _ensure_fresh():
+    """M-247 (anti-staleness): prima di ogni lettura, rigenera il serving SE un
+    registry è più recente del DB. Così la dashboard non mostra MAI dati vecchi —
+    la statistica è sempre allineata ai registry, senza lanci manuali.
+    Best-effort: se l'auto-refresh fallisce non blocca la lettura del DB esistente
+    (un dato un po' vecchio è meglio di un crash), ma logga l'errore (P0-5)."""
+    try:
+        import aggregate_to_sqlite as _agg
+        if _agg.ensure_fresh(DB_PATH):
+            print(f"[stats_v2] serving rigenerato (registry più recenti del DB): {DB_PATH}", file=__import__("sys").stderr)
+    except Exception as exc:  # noqa: BLE001 — best-effort, non deve mai rompere la dashboard
+        print(f"[stats_v2] WARN auto-refresh fallito: {exc}", file=__import__("sys").stderr)
+
+
 def _connect():
     """Apre lo SQLite serving in sola lettura logica con row_factory dict.
 
-    Se il file non esiste, fallisce in modo esplicito (P0-5): meglio un errore
-    parlante che query mute su un DB vuoto creato al volo da sqlite3.connect.
+    M-247: prima garantisce la freschezza (auto-refresh se stale). Se il file non
+    esiste nemmeno dopo l'ensure, fallisce in modo esplicito (P0-5).
     """
+    _ensure_fresh()
     if not os.path.isfile(DB_PATH):
         raise FileNotFoundError(
             f"SQLite serving assente: {DB_PATH}. "
