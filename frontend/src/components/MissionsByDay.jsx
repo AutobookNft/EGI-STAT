@@ -24,6 +24,7 @@ function monthLabel(ym) {
 
 export default function MissionsByDay() {
   const [data, setData] = useState(null);
+  const [daily, setDaily] = useState([]);   // M-252: righe nette per giorno (mission-only)
   const [month, setMonth] = useState(null);
 
   useEffect(() => {
@@ -31,6 +32,10 @@ export default function MissionsByDay() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d && d.days) setData(d); })
       .catch((e) => console.error('missions_by_day fetch failed', e));
+    fetch(`${API_BASE_URL}/api/v2/stats/daily`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (Array.isArray(d)) setDaily(d); })
+      .catch((e) => console.error('daily fetch failed', e));
   }, []);
 
   const months = useMemo(() => {
@@ -54,6 +59,11 @@ export default function MissionsByDay() {
     organTotals[o] = monthDays.reduce((s, d) => s + (d.by_organ[o]?.length || 0), 0);
   });
   const monthTotal = monthDays.reduce((s, d) => s + d.total, 0);
+  // M-252: righe nette giornaliere (mission-only) del mese selezionato, X = giorno.
+  const linesChartData = daily
+    .filter((d) => d.date.startsWith(selectedMonth))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((d) => ({ name: d.date.slice(8, 10), lines: d.lines_net }));
 
   const th = { padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap', color: '#222' };
   // Prima colonna sticky: sfondo opaco chiaro + testo scuro leggibile (card a tema chiaro).
@@ -75,6 +85,9 @@ export default function MissionsByDay() {
       </div>
 
       <AdminChart data={chartData} dataKey="total" yLabel="Mission" color="#000000" scrollable={true} />
+
+      <h2 style={{ marginTop: 24 }}>Righe giornaliere — {selectedMonth ? monthLabel(selectedMonth) : ''}</h2>
+      <AdminChart data={linesChartData} dataKey="lines" yLabel="Righe nette" color="#000000" scrollable={true} />
 
       <div style={{ overflowX: 'auto', marginTop: 20 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>

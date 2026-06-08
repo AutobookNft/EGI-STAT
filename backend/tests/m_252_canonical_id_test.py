@@ -25,7 +25,7 @@ def test_canonical_matches_every_real_numbered_mission():
     ids = _all_real_ids()
     assert ids, "nessun id trovato nei registry"
     # un id 'mission' ha un NUMERO finale (i ledger perpetui M-LEDGER-X no)
-    numbered = [i for i in ids if re.search(r"\d$", i)]
+    numbered = [i for i in ids if re.search(r"\d[a-z]?$", i)]  # include suffisso-lettera (M-160a)
     missed = [i for i in numbered if not ecosystem.MISSION_ID_RE.search(i)]
     assert not missed, f"pattern canonico NON copre questi id reali: {missed}"
 

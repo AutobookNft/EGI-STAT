@@ -266,7 +266,7 @@ def canonical_of(key):
 # CHIUNQUE deve classificare/contare le mission DEVE usare questo, mai una regex
 # ad-hoc (il bug della regex parziale che mancava M-FUC- non si ripete).
 import re as _re
-MISSION_ID_RE = _re.compile(r"\bM-(?:[A-Za-z0-9]+-)*\d+\b")
+MISSION_ID_RE = _re.compile(r"\bM-(?:[A-Za-z0-9]+-)*\d+[a-z]?\b")  # suffisso-lettera incluso (M-160a)
 
 
 def cites_mission(text: str) -> bool:
