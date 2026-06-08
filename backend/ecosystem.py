@@ -184,12 +184,21 @@ def normalize_mission(m):
     # Engine-EN ('status'): passa per la tassonomia single-source → loud-on-unknown
     # (un nuovo status non mappato GRIDA, non sparisce). Legacy-IT ('stato'): vocabolario
     # frozen, conta solo 'completed' (nessun rumore sui legacy aperti).
+    # H3 (M-248, regola "delivered", decisione CEO 2026-06-08): una mission con
+    # data di chiusura VALIDA conta come prodotta anche se lo status è transitorio
+    # (es. 'auditing' = audit di chiusura in corso). date_close valorizzato = lavoro
+    # consegnato. La tassonomia resta SSOT del SIGNIFICATO degli status; qui si
+    # decide solo l'inclusione nelle statistiche di produzione.
+    date_close_raw = m.get("data_chiusura") or m.get("date_close")
+    delivered = date_close_raw not in (None, "", "pending")
     status = m.get("status")
     if status:
-        if not status_counts_as_production(status):
+        if not status_counts_as_production(status) and not delivered:
             return None
     elif m.get("stato") == "completed":
         pass  # legacy completata ≡ closed
+    elif delivered:
+        pass  # legacy senza stato ma con data chiusura valida ≡ delivered
     else:
         return None
 

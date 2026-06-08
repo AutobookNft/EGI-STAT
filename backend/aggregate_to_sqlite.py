@@ -39,8 +39,8 @@ AGGREGATOR_VERSION = "1.0.0"
 SCHEMA = [
     # 1) missions — una riga per mission completata/closed (canonico normalize_mission).
     """CREATE TABLE missions (
-        id                   TEXT PRIMARY KEY,           -- 'M-225' / 'M-OS3-049' (univoco cross-organo)
-        organ                TEXT NOT NULL,              -- organo di provenienza (chiave discovery)
+        id                   TEXT NOT NULL,              -- 'M-225' / 'M-OS3-049' (NON univoco: post M-OS3-096 lo stesso id può vivere in organi diversi)
+        organ                TEXT NOT NULL,              -- organo (canonical). Parte della PK: (organ,id) distingue mission omonime
         title                TEXT,
         status               TEXT NOT NULL,              -- canonico 'completed'
         mission_type         TEXT,                       -- feature|bugfix|... (default 'feature')
@@ -60,24 +60,29 @@ SCHEMA = [
         cognitive_load       REAL    NOT NULL DEFAULT 0,
         productivity_index   REAL    NOT NULL DEFAULT 0,
         calculated_at        TEXT,                       -- stats.calculated_at se presente
-        registry_path        TEXT NOT NULL               -- realpath del registry sorgente
+        registry_path        TEXT NOT NULL,              -- realpath del registry sorgente
+        PRIMARY KEY (organ, id)                          -- H1 (M-248): chiave composita anti-collisione
     )""",
     "CREATE INDEX idx_missions_organ  ON missions(organ)",
+    "CREATE INDEX idx_missions_id     ON missions(id)",
     "CREATE INDEX idx_missions_closed ON missions(date_closed)",
     "CREATE INDEX idx_missions_type   ON missions(mission_type)",
 
     # 2) mission_commits — una riga per commit-hash (indice atomico di ricostruibilità SSOT).
+    #    H1 (M-248): chiave include mission_organ → commit di mission omonime non si mescolano.
     """CREATE TABLE mission_commits (
-        mission_id  TEXT NOT NULL,
-        commit_hash TEXT NOT NULL,
-        PRIMARY KEY (mission_id, commit_hash),
-        FOREIGN KEY (mission_id) REFERENCES missions(id) ON DELETE CASCADE
+        mission_organ TEXT NOT NULL,
+        mission_id    TEXT NOT NULL,
+        commit_hash   TEXT NOT NULL,
+        PRIMARY KEY (mission_organ, mission_id, commit_hash),
+        FOREIGN KEY (mission_organ, mission_id) REFERENCES missions(organ, id) ON DELETE CASCADE
     )""",
-    "CREATE INDEX idx_commits_mission ON mission_commits(mission_id)",
+    "CREATE INDEX idx_commits_mission ON mission_commits(mission_organ, mission_id)",
     "CREATE INDEX idx_commits_hash    ON mission_commits(commit_hash)",
 
     # 3) mission_repo_day — una riga per entry stats.by_repo_day[] (traccia giornaliera per-repo).
     """CREATE TABLE mission_repo_day (
+        mission_organ TEXT    NOT NULL,
         mission_id    TEXT    NOT NULL,
         repo          TEXT    NOT NULL,                  -- 'florenceegi/oracode'
         day           TEXT    NOT NULL,                  -- 'YYYY-MM-DD' (campo 'date' nel JSON)
@@ -85,22 +90,35 @@ SCHEMA = [
         lines_added   INTEGER NOT NULL DEFAULT 0,
         lines_deleted INTEGER NOT NULL DEFAULT 0,
         files_touched INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (mission_id, repo, day),
-        FOREIGN KEY (mission_id) REFERENCES missions(id) ON DELETE CASCADE
+        PRIMARY KEY (mission_organ, mission_id, repo, day),
+        FOREIGN KEY (mission_organ, mission_id) REFERENCES missions(organ, id) ON DELETE CASCADE
     )""",
-    "CREATE INDEX idx_repoday_mission  ON mission_repo_day(mission_id)",
+    "CREATE INDEX idx_repoday_mission  ON mission_repo_day(mission_organ, mission_id)",
     "CREATE INDEX idx_repoday_repo_day ON mission_repo_day(repo, day)",
 
     # 4) mission_tags — breakdown tag a livello mission (stats.tags_breakdown{}).
     """CREATE TABLE mission_tags (
-        mission_id TEXT    NOT NULL,
-        tag        TEXT    NOT NULL,                     -- 'FEAT','FIX','ARCH',...
-        count      INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (mission_id, tag),
-        FOREIGN KEY (mission_id) REFERENCES missions(id) ON DELETE CASCADE
+        mission_organ TEXT    NOT NULL,
+        mission_id    TEXT    NOT NULL,
+        tag           TEXT    NOT NULL,                  -- 'FEAT','FIX','ARCH',...
+        count         INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (mission_organ, mission_id, tag),
+        FOREIGN KEY (mission_organ, mission_id) REFERENCES missions(organ, id) ON DELETE CASCADE
     )""",
-    "CREATE INDEX idx_tags_mission ON mission_tags(mission_id)",
+    "CREATE INDEX idx_tags_mission ON mission_tags(mission_organ, mission_id)",
     "CREATE INDEX idx_tags_tag     ON mission_tags(tag)",
+
+    # 4b) mission_organs — H2 (M-248): organi REALI toccati da una mission (da organs[]).
+    #     Una mission cross-organo conta su OGNI organo qui, ma 1 sola in 'missions' (totale distinto).
+    """CREATE TABLE mission_organs (
+        mission_organ TEXT NOT NULL,                     -- organo di storage (FK verso missions)
+        mission_id    TEXT NOT NULL,
+        organ_touched TEXT NOT NULL,                     -- organo realmente toccato (canonical)
+        PRIMARY KEY (mission_organ, mission_id, organ_touched),
+        FOREIGN KEY (mission_organ, mission_id) REFERENCES missions(organ, id) ON DELETE CASCADE
+    )""",
+    "CREATE INDEX idx_morgans_mission ON mission_organs(mission_organ, mission_id)",
+    "CREATE INDEX idx_morgans_touched ON mission_organs(organ_touched)",
 
     # 5) meta — metadati dell'aggregazione (audit del serving rigenerabile).
     """CREATE TABLE meta (
@@ -128,7 +146,7 @@ SCHEMA = [
 
 DROP_TABLES = [
     "time_entries",
-    "mission_commits", "mission_repo_day", "mission_tags", "meta", "missions",
+    "mission_commits", "mission_repo_day", "mission_tags", "mission_organs", "meta", "missions",
 ]
 
 
@@ -205,10 +223,8 @@ def insert_mission(conn, organ, registry_path, nm):
     # pinocapasso, ...). Identità per chiavi non mappate (EGI-DOC resta EGI-DOC).
     organ = ecosystem.canonical_of(organ)
 
-    # UPSERT (NON 'INSERT OR REPLACE'): REPLACE cancellerebbe la riga padre → il
-    # FOREIGN KEY ... ON DELETE CASCADE svuoterebbe mission_commits/repo_day/tags già
-    # inseriti dalla copia precedente, distruggendo l'UNIONE (fix audit M-225 P1 v2).
-    # ON CONFLICT(id) DO UPDATE aggiorna in-place: nessun CASCADE, i figli si accumulano.
+    # H1 (M-248): UPSERT su chiave COMPOSITA (organ,id). Mission omonime in organi
+    # diversi → righe distinte; copie genuine (stesso (organ,id)) → union dei figli.
     conn.execute(
         """INSERT INTO missions (
             id, organ, title, status, mission_type, date_opened, date_closed,
@@ -217,8 +233,8 @@ def insert_mission(conn, organ, registry_path, nm):
             lines_net, lines_touched, files_touched, cognitive_load,
             productivity_index, calculated_at, registry_path
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        ON CONFLICT(id) DO UPDATE SET
-            organ=excluded.organ, title=excluded.title, status=excluded.status,
+        ON CONFLICT(organ,id) DO UPDATE SET
+            title=excluded.title, status=excluded.status,
             mission_type=excluded.mission_type, date_opened=excluded.date_opened,
             date_closed=excluded.date_closed, cross_organ=excluded.cross_organ,
             files_modified=excluded.files_modified,
@@ -261,8 +277,8 @@ def insert_mission(conn, organ, registry_path, nm):
         if not h:
             continue
         conn.execute(
-            "INSERT OR IGNORE INTO mission_commits (mission_id, commit_hash) VALUES (?,?)",
-            (mid, str(h)),
+            "INSERT OR IGNORE INTO mission_commits (mission_organ, mission_id, commit_hash) VALUES (?,?,?)",
+            (organ, mid, str(h)),
         )
 
     # by_repo_day[] — chiave giorno = 'date' nel JSON (verificato M-001 e M-OS3-049).
@@ -273,10 +289,10 @@ def insert_mission(conn, organ, registry_path, nm):
             continue
         conn.execute(
             """INSERT OR REPLACE INTO mission_repo_day (
-                mission_id, repo, day, commits, lines_added, lines_deleted, files_touched
-            ) VALUES (?,?,?,?,?,?,?)""",
+                mission_organ, mission_id, repo, day, commits, lines_added, lines_deleted, files_touched
+            ) VALUES (?,?,?,?,?,?,?,?)""",
             (
-                mid, repo, day,
+                organ, mid, repo, day,
                 _int(e.get("commits")),
                 _int(e.get("lines_added")),
                 _int(e.get("lines_deleted")),
@@ -284,14 +300,76 @@ def insert_mission(conn, organ, registry_path, nm):
             ),
         )
 
-    # tags_breakdown{} a livello mission. INSERT OR REPLACE su PK (mission_id, tag).
+    # tags_breakdown{} a livello mission. INSERT OR REPLACE su PK (mission_organ, mission_id, tag).
     for tag, cnt in (s.get("tags_breakdown") or {}).items():
         if not tag:
             continue
         conn.execute(
-            "INSERT OR REPLACE INTO mission_tags (mission_id, tag, count) VALUES (?,?,?)",
-            (mid, str(tag), _int(cnt)),
+            "INSERT OR REPLACE INTO mission_tags (mission_organ, mission_id, tag, count) VALUES (?,?,?,?)",
+            (organ, mid, str(tag), _int(cnt)),
         )
+
+    # H2 (M-248): organi REALI toccati (organs[] da normalize_mission), canonicalizzati.
+    # Fallback all'organo di storage se la lista è vuota (mission non multi-organo).
+    touched = nm.get("organs") or [organ]
+    for o in touched:
+        oc = ecosystem.canonical_of(o)
+        if not oc:
+            continue
+        conn.execute(
+            "INSERT OR IGNORE INTO mission_organs (mission_organ, mission_id, organ_touched) VALUES (?,?,?)",
+            (organ, mid, oc),
+        )
+
+
+# ── Pass2: clustering anti-collisione (H1, M-248) ─────────────────────────────
+def _sort_key(t):
+    """Ordina le copie: vince (per ultima) quella con più commit_hashes; tie-break
+    deterministico = nome organo (lessicografico). P0-3: chiave esplicita."""
+    organ, _registry, nm = t
+    return (len((nm.get("stats") or {}).get("commit_hashes") or []), organ)
+
+
+def _norm_title(nm):
+    """Titolo normalizzato per il confronto identità: trim + collapse + casefold
+    (normalize_mission fa fallback title=id, e i due schemi possono differire di casing)."""
+    return " ".join((nm.get("title") or "").split()).casefold()
+
+
+def _cluster_by_identity(copies):
+    """Raggruppa le copie di UNO stesso id per identità-mission = (title_norm, date_opened).
+    Stessa identità ⇒ stessa mission (copie genuine da FONDERE). Identità diverse ⇒
+    mission DIVERSE omonime (collisione id post M-OS3-096) da TENERE SEPARATE.
+    Ritorna list[list[copy]]. Default sicuro: in dubbio separa (non perde dati)."""
+    clusters = {}
+    for c in copies:
+        _organ, _rp, nm = c
+        key = (_norm_title(nm), nm.get("date_opened"))
+        clusters.setdefault(key, []).append(c)
+    return list(clusters.values())
+
+
+def merge_and_insert(conn, mid, copies):
+    """Pass2 per un id. Cluster per identità: ogni cluster = 1 riga mission (sotto
+    l'organo vincitore = più commit_hashes), copie genuine fuse via union dei figli;
+    cluster multipli = mission omonime distinte (righe separate, chiave (organ,id)).
+    Ritorna list[organ_canon] (1 per riga scritta = 1 per cluster)."""
+    written = []
+    clusters = _cluster_by_identity(copies)
+    for cluster in clusters:
+        cluster_sorted = sorted(cluster, key=_sort_key)
+        winner_organ = ecosystem.canonical_of(cluster_sorted[-1][0])
+        for _organ, registry_path, nm in cluster_sorted:
+            insert_mission(conn, winner_organ, registry_path, nm)  # union su (winner_organ, mid)
+        written.append(winner_organ)
+    if len(clusters) > 1:
+        regs = "; ".join(
+            f"[{ecosystem.canonical_of(c[-1][0])}] {(c[-1][2].get('title') or '')[:40]}"
+            for c in clusters
+        )
+        print(f"  OMONIMI: id '{mid}' = {len(clusters)} mission DIVERSE tenute separate → {regs}",
+              file=sys.stderr)
+    return written
 
 
 # ── Asse ORE (M-234) ──────────────────────────────────────────────────────────
@@ -564,28 +642,14 @@ def aggregate(db_path, verbose=False):
         # tiebreaker dichiarato = nome organo (a parità di ricchezza vince l'organo
         # lessicograficamente maggiore, processato per ultimo — es. 'os3-matrix' > 'oracode',
         # così le missioni engine M-OS3-* restano attribuite a os3-matrix). Deterministico.
-        def _sort_key(t):
-            organ, _registry, nm = t
-            return (len((nm.get("stats") or {}).get("commit_hashes") or []), organ)
-
+        # H1 (M-248): clustering per identità. Un id può corrispondere a PIÙ mission
+        # reali (collisione cross-registry post M-OS3-096): merge_and_insert le tiene
+        # separate (chiave (organ,id)) e fonde solo le copie genuine. Una riga per cluster.
         for mid, copies in by_id.items():
-            copies_sorted = sorted(copies, key=_sort_key)  # ricca+organo-maggiore per ultima
-            for organ, registry_path, nm in copies_sorted:
-                insert_mission(conn, organ, registry_path, nm)
-            win_organ = copies_sorted[-1][0]
-            if len(copies) > 1:
-                regs = ", ".join(sorted({o for o, _, _ in copies}))
-                print(
-                    f"  MERGE: id '{mid}' in {len(copies)} registry ({regs}) -> "
-                    f"union commit_hashes, scalare organ='{win_organ}'",
-                    file=sys.stderr,
-                )
-            # M-OS3-060: reporting allineato ai valori PERSISTITI (insert_mission applica
-            # canonical_of su missions.organ); meta/--verbose usa la chiave canonica, non l'alias.
-            win_organ_canon = ecosystem.canonical_of(win_organ)
-            organs.add(win_organ_canon)
-            per_organ[win_organ_canon] = per_organ.get(win_organ_canon, 0) + 1
-            n_missions += 1
+            for win_organ_canon in merge_and_insert(conn, mid, copies):
+                organs.add(win_organ_canon)
+                per_organ[win_organ_canon] = per_organ.get(win_organ_canon, 0) + 1
+                n_missions += 1
 
         # Asse ORE (M-234): voci manual + stima-commit. DOPO Pass 2 (mission_commits
         # popolata, serve per l'esclusivita mission della stima).

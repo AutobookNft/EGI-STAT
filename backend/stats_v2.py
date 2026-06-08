@@ -200,7 +200,7 @@ def aggregate_daily(missions=None):
         # valore v3 dalle colonne grezze e poi sommarlo/mediarlo per giorno.
         mission_rows = conn.execute(
             f"""
-            SELECT id, date_closed AS day, cognitive_load, productivity_index,
+            SELECT organ, id, date_closed AS day, cognitive_load, productivity_index,
                    weighted_commits, lines_added, lines_deleted,
                    files_touched, total_commits
             FROM missions
@@ -208,14 +208,15 @@ def aggregate_daily(missions=None):
             """
         ).fetchall()
         tag_rows = conn.execute(
-            "SELECT mission_id, tag, count FROM mission_tags"
+            "SELECT mission_organ, mission_id, tag, count FROM mission_tags"
         ).fetchall()
     finally:
         conn.close()
 
+    # H1 (M-248): chiave (organ,id) — i tag di mission omonime non si mescolano.
     tags_by_mission = defaultdict(dict)
     for t in tag_rows:
-        tags_by_mission[t["mission_id"]][t["tag"]] = t["count"]
+        tags_by_mission[(t["mission_organ"], t["mission_id"])][t["tag"]] = t["count"]
 
     work = {r["day"]: r for r in work_rows}
 
@@ -230,7 +231,7 @@ def aggregate_daily(missions=None):
             "lines_deleted": m["lines_deleted"] or 0,
             "files": m["files_touched"] or 0,
             "commits": m["total_commits"] or 0,
-            "dominant_tag": _dominant_tag(tags_by_mission.get(m["id"], {})),
+            "dominant_tag": _dominant_tag(tags_by_mission.get((m["organ"], m["id"]), {})),
         })
         b = closed[m["day"]]
         b["missions_closed"] += 1
