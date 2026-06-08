@@ -1,4 +1,8 @@
 """
+@package  EGI-STAT/backend/tests
+@author   Padmin D. Curtis (CTO-AI) for Fabio Cherici (CEO)
+@version  1.0.0 (FlorenceEGI — EGI-STAT, M-248)
+@date     2026-06-08
 @purpose Test RED M-248: fix strutturale stats.
   H1 — chiave composita (organ,id): mission DIVERSE con stesso id (collisione
        cross-registry post M-OS3-096) NON devono collassare; copie GENUINE
@@ -85,3 +89,27 @@ def test_h6_no_unclosed_rows(tmp_path):
         "SELECT COUNT(*) FROM missions WHERE NOT (date_closed IS NOT NULL AND date_closed!='' AND date_closed!='pending')"
     ).fetchone()[0]
     assert bad == 0, f"{bad} righe in missions che il serving filtra fuori (_CLOSED_WHERE)"
+
+
+# ---- consumer serving: completed_missions NON mescola i tag tra omonimi ----
+def test_completed_missions_no_tag_mix(tmp_path, monkeypatch):
+    db = str(tmp_path / "c.db")
+    conn = sqlite3.connect(db)
+    agg.create_schema(conn)
+    nmA = _nm("M-242", "EGI-DOC", "Fix label")
+    nmA["stats"]["tags_breakdown"] = {"FIX": 2}
+    nmB = _nm("M-242", "EGI", "Thumbnail modale")
+    nmB["stats"]["tags_breakdown"] = {"FEAT": 3}
+    agg.insert_mission(conn, "EGI-DOC", "/r/a", nmA)
+    agg.insert_mission(conn, "EGI", "/r/b", nmB)
+    conn.commit(); conn.close()
+
+    import stats_v2
+    monkeypatch.setattr(stats_v2, "DB_PATH", db)
+    monkeypatch.setattr(stats_v2, "_ensure_fresh", lambda: None)  # no auto-rebuild sul fixture
+    res = stats_v2.completed_missions()
+    tagsets = sorted(
+        tuple(sorted(m["stats"]["tags_breakdown"].items()))
+        for m in res if m["mission_id"] == "M-242"
+    )
+    assert tagsets == [(("FEAT", 3),), (("FIX", 2),)], f"tag mescolati tra omonimi: {tagsets}"

@@ -96,19 +96,30 @@ def completed_missions(registry=None):
             """
         ).fetchall()
 
+        # H1 (M-248): tag per (organ,id) — niente mix tra mission omonime.
         tags_by_mission = defaultdict(dict)
-        for t in conn.execute("SELECT mission_id, tag, count FROM mission_tags").fetchall():
-            tags_by_mission[t["mission_id"]][t["tag"]] = t["count"]
+        for t in conn.execute(
+            "SELECT mission_organ, mission_id, tag, count FROM mission_tags"
+        ).fetchall():
+            tags_by_mission[(t["mission_organ"], t["mission_id"])][t["tag"]] = t["count"]
+        # organi reali toccati (H2): da mission_organs, per (organ,id).
+        organs_by_mission = defaultdict(list)
+        for o in conn.execute(
+            "SELECT mission_organ, mission_id, organ_touched FROM mission_organs"
+        ).fetchall():
+            organs_by_mission[(o["mission_organ"], o["mission_id"])].append(o["organ_touched"])
     finally:
         conn.close()
 
     out = []
     for r in rows:
+        key = (r["organ"], r["id"])
+        organi = organs_by_mission.get(key) or ([r["organ"]] if r["organ"] else [])
         out.append({
             "mission_id": r["id"],
             "titolo": r["title"] or "",
             "tipo_missione": r["mission_type"] or "",
-            "organi_coinvolti": [r["organ"]] if r["organ"] else [],
+            "organi_coinvolti": organi,
             "cross_organo": bool(r["cross_organ"]),
             "data_apertura": r["date_opened"],
             "data_chiusura": r["date_closed"],
@@ -119,7 +130,7 @@ def completed_missions(registry=None):
                 "lines_added": r["lines_added"],
                 "lines_deleted": r["lines_deleted"],
                 "files_touched": r["files_touched"],
-                "tags_breakdown": dict(tags_by_mission.get(r["id"], {})),
+                "tags_breakdown": dict(tags_by_mission.get(key, {})),
                 "cognitive_load": r["cognitive_load"],
                 "productivity_index": r["productivity_index"],
             },
@@ -463,36 +474,39 @@ def daily_detail(date_str):
         ).fetchall()
 
         # Per ogni repo: quali mission lo toccano quel giorno (per medie CL/PI e tag).
-        repo_missions = defaultdict(set)
-        all_mission_ids = set()
+        # H1 (M-248): chiave (organ,id) — mission omonime nello stesso giorno NON si mescolano.
+        repo_missions = defaultdict(set)   # repo -> set((organ,id))
+        all_keys = set()
         for r in conn.execute(
-            "SELECT DISTINCT mission_id, repo FROM mission_repo_day WHERE day = ?",
+            "SELECT DISTINCT mission_organ, mission_id, repo FROM mission_repo_day WHERE day = ?",
             (date_str,),
         ).fetchall():
-            repo_missions[r["repo"]].add(r["mission_id"])
-            all_mission_ids.add(r["mission_id"])
+            k = (r["mission_organ"], r["mission_id"])
+            repo_missions[r["repo"]].add(k)
+            all_keys.add(k)
 
-        # CL/PI per mission (pre-calcolati, single-source) e tag per mission.
+        # CL/PI per mission (pre-calcolati, single-source) e tag per mission, keyati (organ,id).
         mission_cl = {}
         mission_pi = {}
-        if all_mission_ids:
-            qmarks = ",".join("?" * len(all_mission_ids))
-            ids = list(all_mission_ids)
+        tags_by_mission = defaultdict(lambda: defaultdict(int))
+        if all_keys:
+            ids = list({mid for (_o, mid) in all_keys})
+            qmarks = ",".join("?" * len(ids))
             for m in conn.execute(
-                f"SELECT id, cognitive_load, productivity_index FROM missions WHERE id IN ({qmarks})",
+                f"SELECT organ, id, cognitive_load, productivity_index FROM missions WHERE id IN ({qmarks})",
                 ids,
             ).fetchall():
-                mission_cl[m["id"]] = m["cognitive_load"]
-                mission_pi[m["id"]] = m["productivity_index"]
-
-            tags_by_mission = defaultdict(lambda: defaultdict(int))
+                k = (m["organ"], m["id"])
+                if k in all_keys:
+                    mission_cl[k] = m["cognitive_load"]
+                    mission_pi[k] = m["productivity_index"]
             for t in conn.execute(
-                f"SELECT mission_id, tag, count FROM mission_tags WHERE mission_id IN ({qmarks})",
+                f"SELECT mission_organ, mission_id, tag, count FROM mission_tags WHERE mission_id IN ({qmarks})",
                 ids,
             ).fetchall():
-                tags_by_mission[t["mission_id"]][t["tag"]] += t["count"]
-        else:
-            tags_by_mission = {}
+                k = (t["mission_organ"], t["mission_id"])
+                if k in all_keys:
+                    tags_by_mission[k][t["tag"]] += t["count"]
     finally:
         conn.close()
 
@@ -564,8 +578,8 @@ def daily_detail(date_str):
 
     # Medie a livello giorno: sulle mission DISTINTE attive quel giorno (non
     # pesate sul numero di repo toccati), coerenti con missions_count.
-    distinct_cl = [mission_cl.get(m) for m in all_mission_ids]
-    distinct_pi = [mission_pi.get(m) for m in all_mission_ids]
+    distinct_cl = [mission_cl.get(m) for m in all_keys]
+    distinct_pi = [mission_pi.get(m) for m in all_keys]
     day_dom = _dominant_tag(day_tag_counts)
     summary = {
         "total_commits": sum_commits,
@@ -581,7 +595,7 @@ def daily_detail(date_str):
         "testing_hours": 0.0,
         "day_type": day_dom if day_dom else "mission",
         "day_type_icon": _TAG_ICON.get(day_dom, _DEFAULT_ICON),
-        "missions_count": len(all_mission_ids),
+        "missions_count": len(all_keys),
     }
 
     return {
