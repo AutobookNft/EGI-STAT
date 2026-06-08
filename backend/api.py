@@ -326,6 +326,18 @@ def get_v2_monthly():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/v2/stats/missions_by_day', methods=['GET'])
+def get_v2_missions_by_day():
+    """M-245: mission chiuse giorno-per-giorno suddivise per organo (tutti gli
+    organi multi-registry). Alimenta la tabella giorno×organo e il grafico
+    giornaliero del frontend."""
+    from stats_v2 import daily_missions_by_organ
+    try:
+        return jsonify(daily_missions_by_organ())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/v2/stats/daily_detail', methods=['GET'])
 def get_v2_daily_detail():
     """Daily detail MISSION-ONLY from SQLite serving (fonte unica) — M-229.

@@ -330,6 +330,62 @@ def aggregate_monthly(daily_data=None):
     return _aggregate_period(daily_data, _month_key)
 
 
+def daily_missions_by_organ():
+    """Mission chiuse giorno-per-giorno, suddivise per ORGANO di provenienza.
+
+    M-245: serve la tabella "giorno × organo" e il grafico giornaliero. Legge
+    TUTTI gli organi dallo SQLite (multi-registry: os3-matrix, FORTINO,
+    oracode/Fucina, EGI-DOC, ...), niente accoppiamento a un singolo organo.
+
+    Attribuzione: una mission al GIORNO di chiusura (date_closed) e all'organo
+    scalare `organ`. P0-3: filtro chiusura esplicito (_CLOSED_WHERE), nessun
+    default nascosto.
+
+    Shape:
+      {
+        "organs": [organo, ...],          # tutti gli organi con ≥1 chiusura, per totale desc
+        "days": [
+          {"date": "YYYY-MM-DD", "total": int,
+           "by_organ": {organo: [mission_id, ...], ...}},
+          ...                              # ordinati per data desc (più recente prima)
+        ]
+      }
+    """
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT id, date_closed AS day, organ
+            FROM missions
+            WHERE {_CLOSED_WHERE}
+            ORDER BY date_closed DESC, organ, id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+
+    organ_totals = defaultdict(int)
+    days = defaultdict(lambda: defaultdict(list))  # day -> organ -> [ids]
+    for r in rows:
+        day = (r["day"] or "")[:10]
+        organ = r["organ"] or "(sconosciuto)"
+        if not day:
+            continue
+        days[day][organ].append(r["id"])
+        organ_totals[organ] += 1
+
+    organs = sorted(organ_totals.keys(), key=lambda o: (-organ_totals[o], o))
+    days_out = []
+    for day in sorted(days.keys(), reverse=True):
+        by_organ = {o: ids for o, ids in days[day].items()}
+        days_out.append({
+            "date": day,
+            "total": sum(len(ids) for ids in by_organ.values()),
+            "by_organ": by_organ,
+        })
+    return {"organs": organs, "days": days_out}
+
+
 # ── Dettaglio giornaliero MISSION-ONLY (M-229) ────────────────────────────────
 # Mappa tag-dominante -> emoji. I tag sono quelli del registry mission (mission_tags).
 _TAG_ICON = {

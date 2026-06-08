@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminChart from './components/AdminChart';
 import DailyStats from './components/DailyStats';
+import MissionsByDay from './components/MissionsByDay';
 import AddTimeModal from './components/AddTimeModal';
 import { LayoutDashboard, TrendingUp, Brain, Target, GitCommit, FileCode, Activity } from 'lucide-react';
 import './item.css';
@@ -146,6 +147,13 @@ function App() {
             </div>
             <AdminChart data={stats} dataKey="files" yLabel="Files" color="#000000" scrollable={true} />
           </div>
+        </div>
+
+        <div className="section-divider" style={{ margin: '40px 0', borderBottom: '1px solid #333' }}></div>
+
+        {/* M-245: dettaglio mission giorno-per-giorno (grafico per mese + tabella per organo) */}
+        <div className="metrics-grid">
+          <MissionsByDay />
         </div>
       </main>
     </div>
