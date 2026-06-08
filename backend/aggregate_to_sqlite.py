@@ -606,7 +606,15 @@ def aggregate(db_path, verbose=False):
     db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)  # crea data/ se assente
 
-    conn = sqlite3.connect(str(db_path))
+    # M-250: rebuild ATOMICO. Costruiamo su un file TEMP e poi os.replace() (rename
+    # atomico sullo stesso filesystem): i lettori concorrenti vedono SEMPRE un DB
+    # completo — o il vecchio o il nuovo, MAI uno a metà DROP+CREATE. Prima il
+    # create_schema (DROP+CREATE) girava sul DB servito → sotto auto-refresh on-read
+    # + più worker, una richiesta poteva leggere il DB svuotato → dashboard a 0 (RACE).
+    tmp_path = Path(f"{db_path}.building.{os.getpid()}")
+    if tmp_path.exists():
+        tmp_path.unlink()
+    conn = sqlite3.connect(str(tmp_path))
     try:
         create_schema(conn)
 
@@ -667,13 +675,22 @@ def aggregate(db_path, verbose=False):
         if verbose:
             for organ, n in sorted(per_organ.items()):
                 print(f"    {organ}: {n} missions")
-        print(
-            f"  OK: {n_missions} missions da {len(registries)} registries "
-            f"({len(organs)} organi) -> {db_path}"
-        )
-        return 0
     finally:
         conn.close()
+
+    # M-250: swap atomico. Se la discovery ha trovato registry ma il build è VUOTO
+    # (n_missions==0) NON sovrascrivere un DB esistente valido: meglio servire dati
+    # un po' vecchi che svuotare la dashboard (guard anti-regressione).
+    if n_missions == 0 and db_path.exists() and len(registries) == 0:
+        tmp_path.unlink(missing_ok=True)
+        print("  WARN: rebuild abortito (0 registry scoperti) — mantengo il DB esistente", file=sys.stderr)
+        return 1
+    os.replace(str(tmp_path), str(db_path))  # rename atomico: i lettori non vedono mai un DB a metà
+    print(
+        f"  OK: {n_missions} missions da {len(registries)} registries "
+        f"({len(organs)} organi) -> {db_path}"
+    )
+    return 0
 
 
 def main(argv=None):
