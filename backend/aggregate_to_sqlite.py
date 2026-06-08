@@ -611,7 +611,8 @@ def aggregate(db_path, verbose=False):
     # completo — o il vecchio o il nuovo, MAI uno a metà DROP+CREATE. Prima il
     # create_schema (DROP+CREATE) girava sul DB servito → sotto auto-refresh on-read
     # + più worker, una richiesta poteva leggere il DB svuotato → dashboard a 0 (RACE).
-    tmp_path = Path(f"{db_path}.building.{os.getpid()}")
+    import threading
+    tmp_path = Path(f"{db_path}.building.{os.getpid()}.{threading.get_ident()}")
     if tmp_path.exists():
         tmp_path.unlink()
     conn = sqlite3.connect(str(tmp_path))
@@ -675,15 +676,18 @@ def aggregate(db_path, verbose=False):
         if verbose:
             for organ, n in sorted(per_organ.items()):
                 print(f"    {organ}: {n} missions")
+    except Exception:
+        tmp_path.unlink(missing_ok=True)  # M-250: niente temp orfano sul percorso d'errore
+        raise
     finally:
         conn.close()
 
-    # M-250: swap atomico. Se la discovery ha trovato registry ma il build è VUOTO
-    # (n_missions==0) NON sovrascrivere un DB esistente valido: meglio servire dati
-    # un po' vecchi che svuotare la dashboard (guard anti-regressione).
-    if n_missions == 0 and db_path.exists() and len(registries) == 0:
+    # M-250: swap atomico. Se il build è VUOTO (n_missions==0) NON sovrascrivere un
+    # DB esistente valido: meglio servire dati un po' vecchi che svuotare la dashboard.
+    # Guard anti-regressione: copre registry illeggibili/discovery ridotta, non solo 0-registry.
+    if n_missions == 0 and db_path.exists():
         tmp_path.unlink(missing_ok=True)
-        print("  WARN: rebuild abortito (0 registry scoperti) — mantengo il DB esistente", file=sys.stderr)
+        print("  WARN: rebuild vuoto (0 missioni) — mantengo il DB esistente", file=sys.stderr)
         return 1
     os.replace(str(tmp_path), str(db_path))  # rename atomico: i lettori non vedono mai un DB a metà
     print(
