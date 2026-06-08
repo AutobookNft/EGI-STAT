@@ -1,0 +1,90 @@
+{
+  "oracode": {
+    "local_dir": "/home/fabio/oracode",
+    "github_repo": "florenceegi/oracode"
+  },
+  "os3-matrix": {
+    "local_dir": "/home/fabio/os3-matrix",
+    "github_repo": "florenceegi/os3-matrix"
+  },
+  "EGI-DOC": {
+    "local_dir": "/home/fabio/EGI-DOC",
+    "github_repo": "florenceegi/EGI-DOC"
+  },
+  "EGI": {
+    "local_dir": "/home/fabio/EGI",
+    "github_repo": "florenceegi/EGI"
+  },
+  "EGI-HUB": {
+    "local_dir": "/home/fabio/EGI-HUB",
+    "github_repo": "AutobookNft/EGI-HUB"
+  },
+  "NATAN_LOC": {
+    "local_dir": "/home/fabio/NATAN_LOC",
+    "github_repo": "florenceegi/NATAN_LOC"
+  },
+  "egi-credential": {
+    "local_dir": "/home/fabio/EGI-Credential",
+    "github_repo": "florenceegi/egi-credential"
+  },
+  "EGI-SIGILLO": {
+    "local_dir": "/home/fabio/EGI-SIGILLO",
+    "github_repo": "florenceegi/EGI-SIGILLO"
+  },
+  "EGI-HUB-HOME-REACT": {
+    "local_dir": "/home/fabio/EGI-HUB-HOME-REACT",
+    "github_repo": "AutobookNft/EGI-HUB-HOME-REACT"
+  },
+  "EGI-INFO": {
+    "local_dir": "/home/fabio/EGI-INFO",
+    "github_repo": "AutobookNft/EGI-INFO"
+  },
+  "EGI-STAT": {
+    "local_dir": "/home/fabio/EGI-STAT",
+    "github_repo": "AutobookNft/EGI-STAT"
+  },
+  "la-bottega": {
+    "local_dir": "/home/fabio/LA-BOTTEGA",
+    "github_repo": "florenceegi/la-bottega"
+  },
+  "creator-staging": {
+    "local_dir": "/home/fabio/CREATOR-STAGING",
+    "github_repo": "florenceegi/creator-staging"
+  },
+  "EGI-SALES": {
+    "local_dir": "/home/fabio/EGI-SALES",
+    "github_repo": "florenceegi/EGI-SALES"
+  },
+  "EGI-HUB-HOME": {
+    "local_dir": "/home/fabio/EGI-HUB-HOME",
+    "github_repo": "AutobookNft/EGI-HUB-HOME"
+  },
+  "pinocapasso": {
+    "local_dir": "/home/fabio/Capasso",
+    "github_repo": "florenceegi/pinocapasso"
+  },
+  "le-vespe-cafe": {
+    "local_dir": "/home/fabio/LeVespe-DOC",
+    "github_repo": "florenceegi/le-vespe-cafe"
+  },
+  "DeepDebug": {
+    "local_dir": "/home/fabio/DeepDebug-DOC",
+    "github_repo": "florenceegi/DeepDebug"
+  },
+  "Fucina": {
+    "local_dir": "/home/fabio/Fucina",
+    "github_repo": "florenceegi/Fucina"
+  },
+  "fabiocherici": {
+    "local_dir": "/home/fabio/fabiocherici.com",
+    "github_repo": "florenceegi/fabiocherici"
+  },
+  "fabio-gianni-site": {
+    "local_dir": "/home/fabio/FABIO-GIANNI",
+    "github_repo": "florenceegi/fabio-gianni-site"
+  },
+  "FORTINO": {
+    "local_dir": "/home/fabio/FORTINO",
+    "github_repo": "florenceegi/FORTINO"
+  }
+}
