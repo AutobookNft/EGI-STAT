@@ -10,6 +10,57 @@
   },
   "missions": [
     {
+      "id": "M-251",
+      "title": "Fix regressione M-250: rebuild atomico preserva tabelle legacy (righe nette) + re-ingest + totali tabella",
+      "trigger_matrix": 2,
+      "status": "closed",
+      "date_open": "2026-06-08",
+      "date_close": "2026-06-08",
+      "scope_hash": "bbf63af5e6b96d4dcef73522cdb3b1b26465fa7040de94e85b9d09263eb8056f",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-08T21:45:23.429Z",
+      "report_tecnico": "docs/missions/M-251.md",
+      "report_esteso": "docs/missions/M-251_FULL.md",
+      "report_technical": "docs/missions/M-251.md",
+      "report_extended": "docs/missions/M-251_FULL.md",
+      "organs": [
+        "EGI-STAT"
+      ],
+      "stats": {
+        "total_commits": 1,
+        "lines_added": 44,
+        "lines_deleted": 1,
+        "lines_net": 43,
+        "lines_touched": 45,
+        "files_touched": 3,
+        "weighted_commits": 1.5,
+        "cognitive_load": 1.98,
+        "productivity_index": 9.72,
+        "tags_breakdown": {
+          "FIX": 1
+        },
+        "commit_hashes": [
+          "8128e907e8fd57dc1de8730f3fa73c0680e1add2"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-08",
+            "commits": 1,
+            "lines_added": 44,
+            "lines_deleted": 1,
+            "files_touched": 3,
+            "tags": {
+              "FIX": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-08"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
+    },
+    {
       "id": "M-250",
       "title": "Fix RACE rebuild on-read: build atomico stats.db (os.replace) - dashboard non legge mai DB a meta rebuild",
       "trigger_matrix": 2,
@@ -29,45 +80,61 @@
         "EGI-STAT"
       ],
       "stats": {
-        "total_commits": 3,
-        "lines_added": 527,
-        "lines_deleted": 81,
-        "lines_net": 446,
-        "lines_touched": 608,
-        "files_touched": 13,
-        "weighted_commits": 4,
-        "cognitive_load": 2.74,
-        "productivity_index": 30.88,
+        "total_commits": 6,
+        "lines_added": 675,
+        "lines_deleted": 89,
+        "lines_net": 586,
+        "lines_touched": 764,
+        "files_touched": 27,
+        "weighted_commits": 7.8,
+        "cognitive_load": 2.99,
+        "productivity_index": 45.74,
         "tags_breakdown": {
-          "FIX": 2,
-          "FEAT": 1
+          "FIX": 4,
+          "FEAT": 1,
+          "DOC": 1
         },
         "commit_hashes": [
           "113a4cc596f50cc3e6c4bfc27b3dce6822a52222",
+          "40215a5cea85b56db3de8ad51a51783aaf781e13",
+          "8128e907e8fd57dc1de8730f3fa73c0680e1add2",
           "9e80e8056838bd02f4ac2ddcd95a585c1f6761eb",
+          "db81ed7dc1ec8b61b4ed909a241819f7ab792b53",
           "e0a84fb1c4ffbb5b804fedc67c81b986e01b5e90"
         ],
         "by_repo_day": [
           {
             "repo": "AutobookNft/EGI-STAT",
             "date": "2026-06-08",
-            "commits": 2,
-            "lines_added": 69,
-            "lines_deleted": 12,
-            "files_touched": 2,
+            "commits": 3,
+            "lines_added": 113,
+            "lines_deleted": 13,
+            "files_touched": 4,
             "tags": {
-              "FIX": 2
+              "FIX": 3
             }
           },
           {
             "repo": "florenceegi/EGI",
             "date": "2026-06-08",
-            "commits": 1,
-            "lines_added": 458,
+            "commits": 2,
+            "lines_added": 485,
             "lines_deleted": 69,
-            "files_touched": 11,
+            "files_touched": 19,
             "tags": {
+              "FIX": 1,
               "FEAT": 1
+            }
+          },
+          {
+            "repo": "florenceegi/EGI-DOC",
+            "date": "2026-06-08",
+            "commits": 1,
+            "lines_added": 77,
+            "lines_deleted": 7,
+            "files_touched": 4,
+            "tags": {
+              "DOC": 1
             }
           }
         ],
@@ -576,5 +643,5 @@
       ]
     }
   ],
-  "counter": 250
+  "counter": 251
 }

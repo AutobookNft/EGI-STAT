@@ -1,0 +1,20 @@
+{
+  "mission_id": "M-251",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "registry_status": "absent",
+  "registry_expected_path": "docs/lso/SSOT_REGISTRY.json",
+  "deterministic_watch_matching": "not_available",
+  "matching_method": "manual_assertion_from_caller_note",
+  "note": "EGI-STAT non ha SSOT_REGISTRY.json (istanza LSO ridotta, gia' osservato in M-220/M-221). Nessun match glob deterministico possibile. Il SSOT canonico del sistema statistiche e' cross-organo (vive in os3-matrix), fuori dall'instance_root: NON e' editabile da questa run (cross-project-guard + scope mission). Impatto asserito dal chiamante e validato semanticamente qui.",
+  "impacted_ssots": [
+    {
+      "ssot_path": "os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "ssot_path_absolute": "/home/fabio/os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "location": "cross_organ_external",
+      "impact_type": "manual_assertion",
+      "editable_by_this_run": false,
+      "reason": "Documenta il serving/rebuild del sistema statistiche; M-251 cambia l'invariante di rebuild (preservazione tabelle legacy). Sezione bersaglio: blockquote serving/rebuild attorno a M-247 (auto-refresh read-time) / M-OS3-057, righe ~317-338."
+    }
+  ],
+  "in_instance_ssots_impacted": []
+}

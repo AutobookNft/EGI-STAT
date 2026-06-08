@@ -1,0 +1,31 @@
+{
+  "mission_id": "M-251",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "generated_at": "2026-06-08T21:42:32Z",
+  "actions": [
+    {
+      "ssot_path": "os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "location": "cross_organ_external",
+      "mode": "additive",
+      "status": "proposed_external",
+      "resolution_method": "manual_apply_by_operator",
+      "ssot_content_hash": null,
+      "diff_path": "diffs/STATS_SYSTEM_SSOT.proposed.md",
+      "proposed_patch": "Nuovo blockquote 'Rebuild preserva le tabelle non-gestite da aggregate (M-251) — invariante.' da inserire dopo il blockquote M-247 (auto-refresh read-time), righe ~338. Vedi diff_path per testo verbatim.",
+      "justification": "Il SSOT documenta il rebuild atomico e il degrado pulito ma NON l'invariante di preservazione delle tabelle legacy attraverso il rebuild (grep 0 occorrenze di preserv/copy2/non-gestite). M-251 introduce questa invariante (copy-first). ADDITIVE: aggiunge contesto, non riscrive nulla.",
+      "auto_applied": false,
+      "auto_apply_blocked_reason": "File fuori da instance_root EGI-STAT e cross-organo (os3-matrix): cross-project-guard + scope mission. Il chiamante ha chiesto esplicitamente di proporre la nota e applicarla a mano.",
+      "timestamp": "2026-06-08T21:42:32Z"
+    },
+    {
+      "ssot_path": "(frontend AddTimeModal.jsx — riga TOTALE tabella)",
+      "location": "no_ssot",
+      "mode": "no_change",
+      "status": "no_change",
+      "resolution_method": "no_in_instance_ssot",
+      "justification": "Cambiamento UI presentazionale (tfoot riga TOTALE). Nessun SSOT in-instance (EGI-STAT non ha SSOT_REGISTRY/doc). Il SSOT canonico stats (os3-matrix) non documenta i dettagli di riga della tabella UI a questa granularita'; nessuna lacuna semantica creata. Nessun cambio di contratto API/dato.",
+      "auto_applied": false,
+      "timestamp": "2026-06-08T21:42:32Z"
+    }
+  ]
+}

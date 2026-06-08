@@ -1,0 +1,42 @@
+{
+  "mission_id": "M-251",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "trigger_matrix_type": 2,
+  "generated_by": "doc_sync_v2",
+  "generated_at": "2026-06-08T21:42:32Z",
+  "files_analyzed": [
+    {"path": "backend/aggregate_to_sqlite.py", "change": "modified"},
+    {"path": "backend/tests/m_251_preserve_legacy_test.py", "change": "created"},
+    {"path": "frontend/src/components/AddTimeModal.jsx", "change": "modified"}
+  ],
+  "new_functions_or_classes": [],
+  "removed_functions": [],
+  "behaviors_changed": [
+    {
+      "unit": "aggregate_to_sqlite.aggregate()",
+      "before": "Il rebuild atomico (M-250) costruiva lo SQLite serving NUOVO da zero su file temp e lo sostituiva con os.replace. Le tabelle non gestite da aggregate (legacy_production / legacy_repo_day, popolate dall'ingest separato ingest_legacy_production.py) NON erano in DROP_TABLES ma, partendo da un file vuoto, sparivano al primo rebuild.",
+      "after": "Prima del build, se il DB esiste, aggregate() ne fa una COPIA (shutil.copy2) sul file temp; create_schema droppa/ricrea SOLO le tabelle mission/time elencate in DROP_TABLES; le tabelle legacy NON elencate sopravvivono nella copia. Build + os.replace atomico restano come M-250.",
+      "effect": "Invariante nuova: le tabelle non gestite da aggregate persistono attraverso ogni rebuild del serving. Le righe nette storiche (net_legacy) non vengono più azzerate dal rebuild atomico.",
+      "impact_class": "behavioral_serving_invariant"
+    },
+    {
+      "unit": "frontend AddTimeModal.jsx (tabella Ore per Progetto)",
+      "before": "Tabella Ore-per-Progetto senza riga di totale.",
+      "after": "Aggiunto <tfoot> con riga TOTALE (somma ore, minuti manuali, minuti stima-commit, righe nette) quando ci sono progetti.",
+      "effect": "Aggregazione visiva di colonna in UI. Nessun cambio di contratto API/dato.",
+      "impact_class": "ui_presentational"
+    }
+  ],
+  "narrative_content_changes": [],
+  "key_concepts": [
+    "rebuild SQLite serving",
+    "atomic rebuild os.replace",
+    "tabelle legacy non gestite da aggregate",
+    "legacy_production",
+    "legacy_repo_day",
+    "DROP_TABLES",
+    "righe nette storiche (net_legacy)",
+    "preservazione tabelle attraverso rebuild"
+  ],
+  "notes": "Regressione di M-250 corretta. Il SSOT canonico del sistema statistiche (STATS_SYSTEM_SSOT.md) vive in os3-matrix (istanza diversa, cross-organo) e documenta gia' il rebuild atomico (M-247/M-OS3-057) e il degrado pulito quando legacy_production e' assente, ma NON l'invariante di PRESERVAZIONE delle tabelle legacy attraverso il rebuild. Questa e' la lacuna additiva da colmare."
+}
