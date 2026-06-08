@@ -1,0 +1,6 @@
+{
+  "mission_id": "M-252",
+  "rag_mode": "skipped_no_schema",
+  "reason": "Nessun RAG_SCHEMA configurato (ne CLAUDE.md ne env ORACODE_RAG_SCHEMA). Step 3 (discovery laterale) e Step 5 (re-index RAG) skippati per protocollo (modalita LSO ridotto). EGI-STAT e strumento interno (CLAUDE.md: 'nessun DOC-SYNC richiesto su EGI-DOC').",
+  "lateral": []
+}

@@ -10,6 +10,60 @@
   },
   "missions": [
     {
+      "id": "M-252",
+      "title": "Meccanismo anti-recidiva: pattern mission-ID canonico + guard mis-attribuzione (commit_hashes vuoti)",
+      "trigger_matrix": 2,
+      "status": "closed",
+      "date_open": "2026-06-08",
+      "date_close": "2026-06-08",
+      "scope_hash": "34701bc7b519042257ef49ad731f31028f4a3050f8b4717d782ea6e9143c36d3",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-08T22:49:02.339Z",
+      "report_tecnico": "docs/missions/M-252.md",
+      "report_esteso": "docs/missions/M-252_FULL.md",
+      "report_technical": "docs/missions/M-252.md",
+      "report_extended": "docs/missions/M-252_FULL.md",
+      "organs": [
+        "EGI-STAT"
+      ],
+      "stats": {
+        "total_commits": 2,
+        "lines_added": 129,
+        "lines_deleted": 11,
+        "lines_net": 118,
+        "lines_touched": 140,
+        "files_touched": 8,
+        "weighted_commits": 2.5,
+        "cognitive_load": 2.37,
+        "productivity_index": 15.5,
+        "tags_breakdown": {
+          "FEAT": 1,
+          "FIX": 1
+        },
+        "commit_hashes": [
+          "b9328f7a89104f6667706ded34c30bc8ad171677",
+          "e5e592777c87b877ee1a86c3af41f75f6d4feb81"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-09",
+            "commits": 2,
+            "lines_added": 129,
+            "lines_deleted": 11,
+            "files_touched": 8,
+            "tags": {
+              "FEAT": 1,
+              "FIX": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-09"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
+    },
+    {
       "id": "M-251",
       "title": "Fix regressione M-250: rebuild atomico preserva tabelle legacy (righe nette) + re-ingest + totali tabella",
       "trigger_matrix": 2,
@@ -55,7 +109,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-09"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -138,7 +192,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-09"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -216,7 +270,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-09"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -536,7 +590,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-09"
       },
       "organs": [
         "EGI-STAT"
@@ -634,7 +688,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-09"
       },
       "organs": [
         "EGI-DOC",
@@ -643,5 +697,5 @@
       ]
     }
   ],
-  "counter": 251
+  "counter": 252
 }

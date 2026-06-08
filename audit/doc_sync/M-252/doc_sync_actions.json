@@ -1,0 +1,41 @@
+{
+  "mission_id": "M-252",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "rag_mode": "skipped_no_schema",
+  "actions": [
+    {
+      "ssot_path": "docs/stats/STATS_SYSTEM_SSOT.md",
+      "ssot_repo": "os3-matrix",
+      "ssot_abspath": "/home/fabio/os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "mode": "substitutive",
+      "status": "applied",
+      "ssot_content_hash_before": "1d0198064b7476948e196639c13912feed17cdb6fc2d2df827f4c115286aec8f",
+      "ssot_content_hash_after": "f3e11fc5e6a7160376516802fe420aae3b64a5e2ebbed69f2d21c0588c45ec7c",
+      "diff_path": "diffs/STATS_SYSTEM_SSOT.md.diff",
+      "resolution_method": "applied_with_history_preserved",
+      "timestamp": "2026-06-09T00:00:00Z",
+      "justification": "M-252 rende aggregate_daily mission-only (revoca della UNION mission+legacy introdotta da M-OS3-082). La descrizione corrente nel SSOT contraddiceva il codice (anti-pattern: SSOT incoerente). Patch sostitutiva: i paragrafi M-OS3-082/M-OS3-083 sono stati riscritti per descrivere la sorgente corrente (solo mission_repo_day) mantenendo la storia (UNION) marcata come SUPERATA, non cancellata (Step 4.3.4). Aggiunte 3 sezioni: Time-series mission-only (card==grafico), Pattern mission-ID canonico (MISSION_ID_RE/cites_mission), Guard anti-mis-attribuzione in coherence_check.",
+      "sub_changes": [
+        "front-matter last_updated_mission -> M-252",
+        "blocco 'Effetto sulla time-series' (M-OS3-082) -> riscritto: UNION marcata SUPERATA da M-252, sorgente corrente mission-only",
+        "blocco 'Distinzione da non confondere' -> riscritto: card e grafico ora coincidono (mission-only)",
+        "coda paragrafo M-OS3-083 -> aggiunta nota M-252 (time-series mission-only)",
+        "NUOVA sez. 'Time-series mission-only — card == grafico (M-252)'",
+        "NUOVA sez. 'Pattern mission-ID CANONICO (M-252)'",
+        "NUOVA sez. 'Guard anti-mis-attribuzione in coherence_check (M-252)'"
+      ],
+      "governance_note": "Cross-repo (SSOT in os3-matrix, mission in EGI-STAT) + sostitutivo = Trigger Matrix tipo 6. La decisione di sostanza ('stat solo dentro mission') e' decisione CEO gia' registrata nel commit M-252 (b9328f7) e nel prompt di mission che autorizza esplicitamente 'segnala/applica la nota'. La patch e' APPLICATA su disco ma NON committata: il commit del file os3-matrix resta all'operatore (repo engine, governance os3-matrix). Vedi exhaustiveness_check.",
+      "exhaustiveness_check": {
+        "grep_old": "UNION ALL legacy_repo_day",
+        "residuals": [
+          {"line": 227, "verdict": "historical_ok (era ... )"},
+          {"line": 233, "verdict": "historical_ok (descrizione M-OS3-082 superata)"},
+          {"line": 273, "verdict": "current_ok (non piu')"},
+          {"line": 256, "verdict": "historical_ok (paragrafo M-OS3-083, gia' annotato con warning M-252 a riga 265)"},
+          {"line": 665, "verdict": "history_part2_ok (deprecato M-167, intoccato)"}
+        ],
+        "conclusion": "Nessuna asserzione corrente residua del vecchio comportamento union. Tutti i residui sono riferimenti storici legittimi."
+      }
+    }
+  ]
+}

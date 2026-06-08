@@ -1,0 +1,40 @@
+{
+  "version": "2.2.0",
+  "doc_sync_version": "2.2.0",
+  "mission_id": "M-252",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "timestamp_start": "2026-06-09T00:00:00Z",
+  "timestamp_end": "2026-06-09T00:10:00Z",
+  "duration_seconds": 600,
+  "ssots_impacted_direct": 1,
+  "ssots_impacted_lateral": 0,
+  "ssots_modified_additive": 0,
+  "ssots_modified_substitutive": 1,
+  "ssots_no_change": 0,
+  "rag_chunks_reindexed": null,
+  "rag_mode": "skipped_no_schema",
+  "approvals_required": 0,
+  "approvals_received": 0,
+  "outcome": "success",
+  "failure_reason": null,
+  "steps_completed": ["step_1", "step_2", "step_4", "step_5b", "step_6"],
+  "steps_skipped": ["step_3_no_rag_schema", "step_5_no_rag_schema"],
+  "ssot_details": [
+    {
+      "path": "docs/stats/STATS_SYSTEM_SSOT.md",
+      "repo": "os3-matrix",
+      "mode": "substitutive",
+      "status": "applied",
+      "committed": false,
+      "governance": "cross_repo_trigger_type_6_operator_to_commit"
+    }
+  ],
+  "rewrite_flagged": [],
+  "uncovered_new_files": [],
+  "notes": [
+    "EGI-STAT senza SSOT_REGISTRY proprio: SSOT impattato risolto via direttiva esplicita del prompt (os3-matrix), non via watches.",
+    "Coverage gap informativo: STATS_SYSTEM_SSOT in registry os3-matrix non watch-a i file EGI-STAT/backend.",
+    "Patch sostitutiva applicata su disco ma NON committata: file nel repo engine os3-matrix, commit a cura operatore."
+  ],
+  "audit_path": "audit/doc_sync/M-252/"
+}

@@ -1,0 +1,51 @@
+{
+  "mission_id": "M-252",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "trigger_type": 2,
+  "commit": "b9328f7a89104f6667706ded34c30bc8ad171677",
+  "analyzed_at": "2026-06-09T00:00:00Z",
+  "new_functions": [
+    {
+      "file": "backend/ecosystem.py",
+      "symbol": "MISSION_ID_RE",
+      "kind": "module-level compiled regex",
+      "pattern": "\\bM-(?:[A-Za-z0-9]+-)*\\d+\\b",
+      "semantics": "Pattern mission-ID CANONICO single-source. M- + zero o piu segmenti prefisso (OS3, EGI, FUC, DD, NEXUS, CAPASSO, FORTINO, LEVESPE, DROP, ...) + numero finale. Esclude i ledger perpetui senza numero finale (es. M-LEDGER-CAPASSO). Sostituisce tutte le regex mission-id ad-hoc."
+    },
+    {
+      "file": "backend/ecosystem.py",
+      "symbol": "cites_mission(text)",
+      "kind": "function",
+      "semantics": "True se il testo (es. messaggio commit) cita un id mission canonico via MISSION_ID_RE."
+    }
+  ],
+  "removed_functions": [],
+  "behavioral_changes": [
+    {
+      "file": "backend/stats_v2.py",
+      "symbol": "aggregate_daily(missions=None)",
+      "change": "SOSTITUTIVO. La sorgente della time-series passa da 'mission_repo_day UNION ALL legacy_repo_day' (mission+legacy, M-OS3-082) a SOLO 'mission_repo_day' (mission-only).",
+      "rationale": "Decisione CEO: le statistiche si contano SOLO dentro le mission. Garantisce coerenza card giornaliera (daily_detail, gia mission-only) == grafico settimanale (aggregate_daily). Esempio: 8 giu card 37739 == grafico 37739 (prima 37739 vs 63688).",
+      "side_effect": "Il range della time-series daily/weekly/monthly torna ad essere SOLO l'era-mission. legacy_repo_day resta nel DB ma esce dalla time-series mission; serve ancora per asse storico / Ore-per-Progetto.",
+      "contract": "Firma e shape JSON invariati. Cambia il dato (range di giorni) restituito.",
+      "supersedes_doc": "Contraddice direttamente STATS_SYSTEM_SSOT.md sezioni M-OS3-082 (righe 226-245) e M-OS3-083 (righe 247-258) e la nota 'Distinzione da non confondere'."
+    },
+    {
+      "file": "backend/tools/coherence_check.py",
+      "symbol": "main()",
+      "change": "ADDITIVO. Nuovo guard: enumera e segnala le mission CHIUSE con total_commits==0 e nessun mission_repo_day (commit caduti in 'legacy' invece che mission = mis-attribuzione). WARN, non drift fatale.",
+      "rationale": "Rileva automaticamente il buco commit_hashes-vuoti che audit e DeepDebug non avevano colto."
+    }
+  ],
+  "narrative_changes": [],
+  "key_concepts": [
+    "aggregate_daily mission-only",
+    "coerenza card-grafico",
+    "mission_repo_day vs legacy_repo_day",
+    "time-series mission-only",
+    "MISSION_ID_RE pattern canonico",
+    "guard anti-mis-attribuzione",
+    "asse storico legacy"
+  ],
+  "outcome": "success"
+}

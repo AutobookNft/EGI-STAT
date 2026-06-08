@@ -1,0 +1,26 @@
+{
+  "mission_id": "M-252",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "method": "explicit_directive_plus_semantic_match",
+  "instance_registry_status": "absent",
+  "instance_registry_path": "/home/fabio/EGI-STAT/docs/lso/SSOT_REGISTRY.json",
+  "note": "EGI-STAT non ha un SSOT_REGISTRY.json proprio (modalita LSO ridotto, niente RAG_SCHEMA). Il SSOT impattato e nel repo engine os3-matrix, ESPLICITAMENTE indicato dal prompt di mission e confermato da match semantico col diff. Nel registry os3-matrix la entry STATS_SYSTEM_SSOT ha watches.paths=[] e watches.repos=['os3-matrix'] => il matching deterministico standard non lo aggancia ai file EGI-STAT (gap di watch cross-repo segnalato sotto, informativo).",
+  "impacted": [
+    {
+      "ssot_path": "docs/stats/STATS_SYSTEM_SSOT.md",
+      "ssot_repo": "os3-matrix",
+      "ssot_abspath": "/home/fabio/os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "impact_type": "explicit_directive",
+      "matched_concepts": [
+        "aggregate_daily",
+        "mission_repo_day / legacy_repo_day",
+        "time-series mission-only vs mission+legacy",
+        "MISSION_ID_RE"
+      ]
+    }
+  ],
+  "coverage_gap_informative": {
+    "ssot": "docs/stats/STATS_SYSTEM_SSOT.md (os3-matrix registry)",
+    "issue": "watches.paths vuoto e watches.repos non include EGI-STAT/backend, percio modifiche a EGI-STAT/backend/stats_v2.py non triggererebbero questo SSOT via matching deterministico. Suggerimento (non bloccante): aggiungere a watches i path EGI-STAT/backend/stats_v2.py, backend/ecosystem.py, backend/tools/coherence_check.py oppure repo 'EGI-STAT'."
+  }
+}

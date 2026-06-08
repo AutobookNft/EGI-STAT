@@ -1,0 +1,109 @@
+diff --git a/docs/stats/STATS_SYSTEM_SSOT.md b/docs/stats/STATS_SYSTEM_SSOT.md
+index e51f7e7..285fbf1 100644
+--- a/docs/stats/STATS_SYSTEM_SSOT.md
++++ b/docs/stats/STATS_SYSTEM_SSOT.md
+@@ -11,7 +11,7 @@ approved_date: '2026-06-02'
+ date: '2026-06-02'
+ mission: M-OS3-051
+ last_updated: '2026-06-09'
+-last_updated_mission: M-OS3-105
++last_updated_mission: M-252
+ ---
+ 
+ # Sistema Statistiche Oracode Nexus — SSOT
+@@ -223,14 +223,19 @@ Se la tabella `legacy_production` è assente, le chiavi degradano a zero (degrad
+ > ricontato anche nella dimensione giornaliera. `legacy_repo_day` **NON** conserva metriche mission (niente
+ > `weighted_commits`/`cognitive_load`/`productivity_index`/tag): porta solo i conteggi grezzi del giorno.
+ >
+-> **Effetto sulla time-series** (`stats_v2.aggregate_daily()`): la sorgente del *lavoro per giorno* diventa
+-> **`mission_repo_day UNION ALL legacy_repo_day`** (poi `GROUP BY day`). Conseguenza: **la serie storica
+-> (daily/weekly/monthly) e i grafici/filtri della dashboard (6/12 settimane, "tutte", per-anno) coprono ora
+-> l'INTERA storia — dai primi commit (2023+), non più solo l'era-mission.** È **additivo e a degrado pulito**:
+-> se `legacy_repo_day` è assente (ingest non eseguito), la sorgente degrada al solo `mission_repo_day` →
+-> comportamento pre-M-OS3-082 invariato. Nessun cambio di firma/endpoint (`aggregate_daily` mantiene la
+-> stessa shape): cambia solo il **range di giorni** restituito (Trigger Matrix tipo 3 — nuovo asse-dato
+-> esposto, non rottura di contratto).
++> ⚠️ **AGGIORNATO da M-252 (2026-06-09) — vedi sotto §Time-series mission-only.** Il comportamento
++> descritto in questo paragrafo (`aggregate_daily = mission_repo_day UNION ALL legacy_repo_day`) era
++> vero da M-OS3-082 fino a M-252; **M-252 lo ha REVOCATO**: la time-series è di nuovo **mission-only**.
++> Il testo seguente resta come **storia** dell'asse `legacy_repo_day` (che esiste ancora nel DB), non
++> come descrizione corrente della sorgente di `aggregate_daily`.
++>
++> **Effetto sulla time-series (M-OS3-082 → M-252: SUPERATO).** Da M-OS3-082 a M-252, la sorgente del
++> *lavoro per giorno* (`stats_v2.aggregate_daily()`) era **`mission_repo_day UNION ALL legacy_repo_day`**
++> (poi `GROUP BY day`), così la serie storica (daily/weekly/monthly) e i grafici/filtri della dashboard
++> coprivano l'INTERA storia dai primi commit (2023+). **M-252 ha rimosso la UNION**: ora la sorgente è
++> **solo `mission_repo_day`** (mission-only). La tabella `legacy_repo_day` **resta nel DB** per l'asse
++> storico e per Ore-per-Progetto, ma **non entra più** nella time-series mission. Nessun cambio di
++> firma/endpoint (`aggregate_daily` mantiene la stessa shape): cambia solo il **range/totale per giorno**.
+ >
+ > **Confine sulle metriche (importante).** I giorni **legacy** contribuiscono **solo** alle metriche grezze
+ > di lavoro (`commits`/`lines_added`/`lines_deleted`/`lines_net`/`files_touched`). Le metriche **mission**
+@@ -239,10 +244,13 @@ Se la tabella `legacy_production` è assente, le chiavi degradano a zero (degrad
+ > legacy weighted/CL/PI = 0** (non esiste una mission chiusa quel giorno). Coerente col §Confine netto sopra:
+ > l'unione estende solo l'asse *lavoro-grezzo*, non inquina le metriche mission-level.
+ >
+-> **Distinzione da non confondere.** Questa estensione riguarda la **time-series dei grafici**
+-> (`aggregate_daily`), che ora copre tutta la storia. Il **resoconto giornaliero mission-only**
+-> (`daily_detail`/`mission_repo_day`, M-OS3-081/M-229 — vedi §Principio di esclusività mission)
+-> **resta mission-only**: è una superficie distinta con scopo diverso (disciplina), non tocca legacy.
++> **Distinzione (rivista da M-252).** Prima di M-252 la **time-series dei grafici** (`aggregate_daily`,
++> mission+legacy) e il **resoconto giornaliero mission-only** (`daily_detail`/`mission_repo_day`,
++> M-OS3-081/M-229) erano due superfici **con range/numeri diversi** per lo stesso giorno. **Da M-252
++> leggono la STESSA sorgente mission-only**: per un dato giorno la card giornaliera e il grafico
++> settimanale mostrano lo **stesso numero** (es. 8 giu: 37 739 = 37 739; prima 37 739 card vs 63 688
++> grafico). Non sono più "due assi distinti": sono la stessa metrica mission-only su due aggregazioni
++> (giorno vs settimana). Vedi §Time-series mission-only.
+ 
+ > **Serving/dashboard — la storia diventa effettivamente visibile (M-OS3-083).** M-OS3-082 estese il
+ > *dato* (`legacy_repo_day` + `aggregate_daily UNION ALL`) dichiarando "nessun cambio di firma/endpoint";
+@@ -254,8 +262,47 @@ Se la tabella `legacy_production` è assente, le chiavi degradano a zero (degrad
+ > **6 / 12 settimane**, **"tutte"** (intera storia), e i pulsanti **per-anno** (anni derivati dai `period`
+ > `YYYY-Www` della serie, 2023+). È un **cambio comportamentale UI/serving** (Trigger Matrix tipo 2): il
+ > contratto/shape è invariato, cambia solo il **default di `limit`** e ciò che la UI espone. Coerente col
+-> §Principio di esclusività mission: i filtri operano sulla time-series `aggregate_daily` (lavoro-grezzo
+-> mission+legacy), non sul resoconto giornaliero mission-only.
++> §Principio di esclusività mission: i filtri operano sulla time-series `aggregate_daily`. ⚠️ **M-252**:
++> da M-252 quella time-series è **mission-only** (non più "mission+legacy") — coincide con il resoconto
++> giornaliero mission-only sullo stesso giorno. La storia pre-2024 (asse legacy) **non** è più nella
++> serie dei grafici; resta consultabile via asse storico / Ore-per-Progetto. Vedi §Time-series mission-only.
++
++### Time-series mission-only — card == grafico (M-252, 2026-06-09, decisione CEO)
++
++> **Decisione CEO: le statistiche si contano SOLO dentro le mission.** `stats_v2.aggregate_daily()`
++> legge **solo `mission_repo_day`** (mission-only) — **non più** `mission_repo_day UNION ALL legacy_repo_day`
++> (che fu introdotta da M-OS3-082 e qui **revocata**). Conseguenza voluta: la **card giornaliera**
++> (`daily_detail`, già mission-only) e il **grafico settimanale** (`aggregate_daily`) leggono ora la
++> **stessa** sorgente, quindi per lo stesso giorno mostrano lo **stesso numero**. Esempio reale: 8 giu
++> card `37 739` == grafico `37 739` (prima `37 739` card vs `63 688` grafico — l'incoerenza che M-252 chiude).
++>
++> **`legacy_repo_day` resta nel DB** (popolata da `ingest_legacy_production.py`) per l'**asse storico** e
++> per **Ore-per-Progetto**, ma **non entra** nella time-series mission delle metriche giornaliere/settimanali.
++> Il lavoro fuori-mission non conta nella produttività (Mission Protocol: niente si modifica fuori da una
++> mission aperta). **Firma/endpoint/shape invariati** (`aggregate_daily`, `GET /api/v2/stats/{weekly,monthly}`):
++> cambia solo il **dato** restituito (range/totale per giorno). Trigger Matrix tipo 2 (comportamentale).
++
++### Pattern mission-ID CANONICO — single-source anti-regex-parziale (M-252)
++
++> Per classificare/contare le mission, **chi legge i registry o i messaggi di commit DEVE usare l'unica
++> sorgente canonica** `ecosystem.MISSION_ID_RE` (+ helper `ecosystem.cites_mission(text)`), **mai** una
++> regex ad-hoc. Pattern: `\bM-(?:[A-Za-z0-9]+-)*\d+\b` — `M-` + zero o più segmenti-prefisso (`OS3`, `EGI`,
++> `FUC`, `DD`, `NEXUS`, `CAPASSO`, `FORTINO`, `LEVESPE`, `DROP`, …) + un **numero finale**. I **ledger
++> perpetui senza numero finale** (es. `M-LEDGER-CAPASSO`) **non** sono mission e restano esclusi.
++>
++> **Anti-drift garantito da test**: `backend/tests/m_252_canonical_id_test.py` enumera TUTTI gli id reali
++> presenti nei registry e **fallisce** se compare un prefisso nuovo non coperto dal pattern — così il bug
++> della regex parziale (che mancava `M-FUC-`) **non può ripetersi**. Lezione promossa a protocollo generico
++> (Pilastri 4/5): la sorgente-pattern è una, ed è verificata dai dati reali, non scritta a mano.
++
++### Guard anti-mis-attribuzione in coherence_check (M-252)
++
++> `EGI-STAT/backend/tools/coherence_check.py` ora **segnala** le mission **chiuse** con `total_commits==0`
++> e **nessuna** riga `mission_repo_day` corrispondente: sono sospette perché i loro commit probabilmente
++> cadono in "legacy" (fuori-mission fantasma) invece che essere attribuiti alla mission. È **WARN, non
++> drift fatale** (una mission solo-doc/registry può legittimamente non avere commit), ma un numero alto
++> = ritorno del bug `commit_hashes` vuoti. È il buco che audit e DeepDebug non avevano colto: ora viene
++> **rilevato automaticamente a ogni check**.
+ 
+ ### Principio cardine (serving)
+ La dashboard legge da **UNA SOLA fonte: un SQLite LOCALE**. Nessuna lettura diretta di file
