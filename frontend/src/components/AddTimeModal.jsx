@@ -90,6 +90,19 @@ export default function AddTimeModal() {
             <tr><td colSpan={5} style={{ padding: '8px', color: '#888' }}>Nessuna voce ore.</td></tr>
           )}
         </tbody>
+        {hours.length > 0 && (
+          <tfoot>
+            <tr style={{ borderTop: '2px solid #444', fontWeight: 'bold' }}>
+              <td style={{ padding: '8px' }}>TOTALE</td>
+              <td style={{ padding: '8px', color: '#00cec9' }}>
+                {hours.reduce((s, h) => s + (h.hours ?? 0), 0).toLocaleString('it-IT', { maximumFractionDigits: 2 })}
+              </td>
+              <td style={{ padding: '8px' }}>{hours.reduce((s, h) => s + (h.manual_minutes ?? 0), 0).toLocaleString('it-IT')}</td>
+              <td style={{ padding: '8px', color: '#888' }}>{hours.reduce((s, h) => s + (h.commit_minutes ?? 0), 0).toLocaleString('it-IT')}</td>
+              <td style={{ padding: '8px', color: '#a29bfe' }}>{hours.reduce((s, h) => s + (h.lines_net ?? 0), 0).toLocaleString('it-IT')}</td>
+            </tr>
+          </tfoot>
+        )}
       </table>
 
       {open && (

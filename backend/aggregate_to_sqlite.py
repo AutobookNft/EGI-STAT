@@ -611,10 +611,17 @@ def aggregate(db_path, verbose=False):
     # completo — o il vecchio o il nuovo, MAI uno a metà DROP+CREATE. Prima il
     # create_schema (DROP+CREATE) girava sul DB servito → sotto auto-refresh on-read
     # + più worker, una richiesta poteva leggere il DB svuotato → dashboard a 0 (RACE).
-    import threading
+    import threading, shutil
     tmp_path = Path(f"{db_path}.building.{os.getpid()}.{threading.get_ident()}")
     if tmp_path.exists():
         tmp_path.unlink()
+    # M-251: parti da una COPIA del DB esistente per PRESERVARE le tabelle NON gestite
+    # da aggregate — `legacy_production`/`legacy_repo_day` (produzione storica, popolate
+    # da ingest_legacy_production.py). create_schema droppa/ricrea SOLO le tabelle
+    # mission/time (DROP_TABLES); le legacy sopravvivono nella copia. Senza copia, il
+    # rebuild atomico M-250 creava un DB nuovo da zero → legacy perse → righe nette a 0.
+    if db_path.exists():
+        shutil.copy2(str(db_path), str(tmp_path))
     conn = sqlite3.connect(str(tmp_path))
     try:
         create_schema(conn)
