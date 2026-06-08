@@ -184,16 +184,14 @@ def aggregate_daily(missions=None):
     """
     conn = _connect()
     try:
-        # M-OS3-082: time-series = lavoro-mission (mission_repo_day) UNITO al pregresso storico
-        # (legacy_repo_day, commit non-mission) → i grafici si estendono ai primi commit (2023+).
-        # Additivo: se legacy_repo_day non esiste (ingest non eseguito), si degrada al solo mission.
-        has_legacy = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='legacy_repo_day'"
-        ).fetchone() is not None
+        # M-252 (decisione CEO): le statistiche si contano SOLO dentro le mission.
+        # Il grafico settimanale usa la STESSA sorgente della card giornaliera
+        # (mission_repo_day, mission-only) → card e grafico mostrano lo STESSO numero
+        # per lo stesso giorno (prima il weekly univa legacy_repo_day = mission+legacy
+        # → incoerenza). Il lavoro fuori-mission NON conta (Mission Protocol).
+        # NB: legacy_repo_day resta nel DB per l'asse storico/Ore-per-Progetto, ma NON
+        # entra nella time-series mission delle metriche giornaliere/settimanali.
         src = "mission_repo_day"
-        if has_legacy:
-            src = ("(SELECT day,commits,lines_added,lines_deleted,files_touched FROM mission_repo_day "
-                   "UNION ALL SELECT day,commits,lines_added,lines_deleted,files_touched FROM legacy_repo_day)")
         work_rows = conn.execute(
             f"""
             SELECT day,

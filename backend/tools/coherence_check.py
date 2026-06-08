@@ -75,6 +75,15 @@ def main():
         "SELECT COUNT(*) FROM missions WHERE NOT "
         "(date_closed IS NOT NULL AND date_closed!='' AND date_closed!='pending')"
     ).fetchone()[0]
+    # M-252 GUARD anti-mis-attribuzione: una mission CHIUSA con 0 commit attribuiti
+    # (total_commits==0 e nessun mission_repo_day) è sospetta — i suoi commit
+    # probabilmente cadono in legacy ("fuori mission" fantasma). È il buco che audit
+    # e DeepDebug non avevano colto: ora viene SEGNALATO automaticamente a ogni check.
+    unattributed = conn.execute(
+        "SELECT organ, id FROM missions m WHERE total_commits=0 "
+        "AND NOT EXISTS (SELECT 1 FROM mission_repo_day r WHERE r.mission_organ=m.organ AND r.mission_id=m.id) "
+        "ORDER BY date_closed DESC"
+    ).fetchall()
     conn.close()
 
     discrepancies = 0
@@ -96,6 +105,14 @@ def main():
     if unclosed:
         discrepancies += unclosed
         print("  ✗ violazione invariante chiuso")
+    # M-252: mission chiuse senza commit attribuiti (possibile mis-attribuzione)
+    print(f"  mission chiuse SENZA commit attribuiti (M-252): {len(unattributed)}")
+    if unattributed:
+        print("  ⚠ possibile mis-attribuzione (commit in 'legacy' invece che mission):")
+        for organ, mid in unattributed[:10]:
+            print(f"      {organ}:{mid}")
+        # WARN, non drift fatale: alcune mission possono legittimamente non avere commit
+        # (solo doc/registry). Ma un numero alto = il bug commit_hashes-vuoti è tornato.
     print("-" * 60)
     if discrepancies == 0:
         print(f"COHERENCE: registries={expected} db={db_rows} drift=0  → OK")

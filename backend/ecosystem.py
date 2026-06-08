@@ -257,3 +257,18 @@ def canonical_of(key):
     if _CANONICAL_MAP is None:
         _CANONICAL_MAP = _build_canonical_map()
     return _CANONICAL_MAP.get(key, key)
+
+
+# ── M-252: pattern mission-ID CANONICO (single-source, anti-regex-parziale) ──
+# Una mission-id è M- + zero o più segmenti prefisso (OS3, EGI, FUC, DD, NEXUS,
+# CAPASSO, FORTINO, LEVESPE, DROP, ...) + un NUMERO finale. I ledger perpetui
+# (M-LEDGER-CAPASSO, senza numero finale) NON sono mission e restano esclusi.
+# CHIUNQUE deve classificare/contare le mission DEVE usare questo, mai una regex
+# ad-hoc (il bug della regex parziale che mancava M-FUC- non si ripete).
+import re as _re
+MISSION_ID_RE = _re.compile(r"\bM-(?:[A-Za-z0-9]+-)*\d+\b")
+
+
+def cites_mission(text: str) -> bool:
+    """True se il testo (es. messaggio di commit) cita un id mission canonico."""
+    return bool(text and MISSION_ID_RE.search(text))
