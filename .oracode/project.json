@@ -15,5 +15,12 @@
   "registry_path": "/home/fabio/EGI-STAT/docs/missions/MISSION_REGISTRY.json",
   "repo_map_path": "/home/fabio/EGI-STAT/docs/missions/REPO_MAP.json",
   "read_log_path": "/home/fabio/EGI-STAT/audit/MISSION_READ_LOG.jsonl",
-  "bootstrap_index_path": "/home/fabio/EGI-STAT/docs/missions/MISSION_BOOTSTRAP_INDEX.json"
+  "bootstrap_index_path": "/home/fabio/EGI-STAT/docs/missions/MISSION_BOOTSTRAP_INDEX.json",
+  "ssot_first": {
+    "enabled": true,
+    "ssot_globs": [
+      "docs/missions/MISSION_REGISTRY.json"
+    ],
+    "_meta": "M-FUC-021 (pattern M-FUC-020 Fucina) gate SSOT-first: mission trigger 3 richiede lettura SSOT prima di executing (kill-switch: enabled=false). Globs verificati con ls sull'organo."
+  }
 }
