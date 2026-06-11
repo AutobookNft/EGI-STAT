@@ -1,0 +1,20 @@
+# @purpose systemd unit per backend Flask EGI-STAT (gunicorn) — M-266.
+# @author Padmin D. Curtis (AI Partner OS3.0) for Fabio Cherici
+# @version 1.0.0 (EGI-STAT)
+# Install: /etc/systemd/system/egi-stat.service
+[Unit]
+Description=EGI-STAT Flask backend (gunicorn)
+After=network.target
+
+[Service]
+User=forge
+Group=forge
+WorkingDirectory=/home/forge/stat.florenceegi.com/backend
+Environment=PATH=/home/forge/stat.florenceegi.com/backend/.venv/bin:/usr/bin:/bin
+ExecStart=/home/forge/stat.florenceegi.com/backend/.venv/bin/gunicorn \
+    --bind 127.0.0.1:5055 --workers 2 --timeout 60 api:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

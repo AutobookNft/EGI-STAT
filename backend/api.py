@@ -20,6 +20,14 @@ CORS(app)
 # sempre le metriche correnti. Niente più "hard refresh" manuale.
 @app.after_request
 def _no_store_api(resp):
+    # M-266: /api/public/* è consumato dal sito statico fabiocherici.com —
+    # cache breve (60s) per proteggere lo SQLite da fetch ripetuti + CORS
+    # ristretto al solo dominio del sito. Il resto di /api/ resta no-store.
+    if request.path.startswith("/api/public/"):
+        resp.headers["Cache-Control"] = "public, max-age=60"
+        resp.headers["Access-Control-Allow-Origin"] = "https://fabiocherici.com"
+        resp.headers["Vary"] = "Origin"
+        return resp
     if request.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         resp.headers["Pragma"] = "no-cache"
@@ -379,6 +387,21 @@ def get_v2_missions():
         if tipo:
             metrics = [m for m in metrics if m["tipo"] == tipo]
         return jsonify(metrics)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/public/site-stats', methods=['GET'])
+def get_public_site_stats():
+    """Aggregato PUBBLICO per il widget cantiere di fabiocherici.com — M-266.
+
+    SOLO totali (ore, progetti, righe, ultima attività) — mai nomi progetto.
+    Esposto senza auth dal vhost (location /api/public/), CORS ristretto a
+    fabiocherici.com via after_request, cache 60s.
+    """
+    from public_stats import site_stats
+    try:
+        return jsonify(site_stats())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

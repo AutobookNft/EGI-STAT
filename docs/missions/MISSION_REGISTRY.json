@@ -6,9 +6,25 @@
     "version": "1.0.0",
     "created": "2026-06-07",
     "note": "Mission mono-organo migrate dal centrale EGI-DOC. ID storici preservati; nuove mission usano id_prefix.",
-    "updated": "2026-06-08"
+    "updated": "2026-06-11"
   },
   "missions": [
+    {
+      "id": "M-266",
+      "title": "stat.florenceegi.com: deploy EGI-STAT dietro basic auth + endpoint pubblico /api/public/site-stats per fabiocherici.com",
+      "trigger_matrix": 2,
+      "status": "executing",
+      "date_open": "2026-06-11",
+      "date_close": null,
+      "scope_hash": "65608f95c756b0f4cf1941d14b2941b8b7f340a088af7315fd17d205d972a130",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-11T19:43:03.329Z",
+      "ssot_waiver": {
+        "reason": "Endpoint pubblico aggregato read-only su pattern stats_v2 esistente (M-234/M-OS3-086) + vhost pattern tmp-le-vespe (M-LEVESPE-020); fonti lette e citate nel codice",
+        "at": "2026-06-11T19:43:03.326Z",
+        "by": "supervisor"
+      }
+    },
     {
       "id": "M-252",
       "title": "Meccanismo anti-recidiva: pattern mission-ID canonico + guard mis-attribuzione (commit_hashes vuoti)",
@@ -697,5 +713,5 @@
       ]
     }
   ],
-  "counter": 252
+  "counter": 266
 }
