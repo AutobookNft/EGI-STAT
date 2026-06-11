@@ -24,7 +24,11 @@ def _no_store_api(resp):
     # cache breve (60s) per proteggere lo SQLite da fetch ripetuti + CORS
     # ristretto al solo dominio del sito. Il resto di /api/ resta no-store.
     if request.path.startswith("/api/public/"):
-        resp.headers["Cache-Control"] = "public, max-age=60"
+        # cache pubblica SOLO su 200 — gli errori non vanno cacheati (audit M-266 R1)
+        if resp.status_code == 200:
+            resp.headers["Cache-Control"] = "public, max-age=60"
+        else:
+            resp.headers["Cache-Control"] = "no-store"
         resp.headers["Access-Control-Allow-Origin"] = "https://fabiocherici.com"
         resp.headers["Vary"] = "Origin"
         return resp
@@ -403,7 +407,13 @@ def get_public_site_stats():
     try:
         return jsonify(site_stats())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Endpoint NON autenticato: mai dettagli interni al client (audit M-266 R1).
+        # Dettaglio solo nel log server-side; risposta generica e non cacheabile.
+        import sys
+        print(f"[public_site_stats] ERROR: {e}", file=sys.stderr)
+        resp = jsonify({"error": "stats unavailable"})
+        resp.headers["Cache-Control"] = "no-store"
+        return resp, 500
 
 
 @app.route('/api/v2/stats/summary', methods=['GET'])

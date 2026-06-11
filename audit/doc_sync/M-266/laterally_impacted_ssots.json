@@ -1,0 +1,6 @@
+{
+  "mission_id": "M-266",
+  "rag_mode": "skipped_no_schema",
+  "note": "Nessun RAG_SCHEMA in CLAUDE.md ne ORACODE_RAG_SCHEMA in env — Step 3 skip (modalita LSO ridotto). Discovery laterale fuori-repo nota dal prompt chiamante: EGI-DOC/ROUTE53_SUBDOMAIN_PROCEDURE.md gia aggiornato e pushato in altra sede (fuori scope di questo run).",
+  "impacted": []
+}

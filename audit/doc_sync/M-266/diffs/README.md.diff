@@ -1,0 +1,39 @@
+diff --git a/README.md b/README.md
+index b15173b..3173f7f 100644
+--- a/README.md
++++ b/README.md
+@@ -147,7 +147,33 @@ Questo comando può essere schedulato (ad esempio con `cron` e lo script `daily_
+ 
+ ---
+ 
+-## Deployment su Laravel Forge
++## Deploy corrente — stat.florenceegi.com (M-266)
++
++Da M-266 (2026-06-11) EGI-STAT è deployato su **https://stat.florenceegi.com** (EC2 dietro ALB,
++pattern tmp-le-vespe). La sezione Forge più sotto è **legacy** (deploy v1 Postgres su sslip.io,
++superato): il serving in produzione è lo **SQLite** `backend/data/stats.db`, rigenerato dai
++registry locali e *shipped* dalla macchina dev.
++
++- **Accesso**: dashboard + API interne dietro **basic auth** nginx (`.htpasswd-egistat`).
++  UNICO endpoint pubblico: **`GET /api/public/site-stats`** — aggregato minimo (ore, progetti,
++  righe nette, ultima attività) per il widget di fabiocherici.com. **Mai nomi progetto**
++  (vincolo privacy); CORS solo `https://fabiocherici.com`, cache 60s solo su 200,
++  rate-limit nginx 10 req/min.
++- **Backend prod**: gunicorn `127.0.0.1:5055` via systemd `egi-stat`
++  (`deploy/systemd/egi-stat.service`), vhost `deploy/nginx/stat.florenceegi.com.conf`
++  (TLS terminato all'ALB; `/health` libero per il target check).
++- **Deploy completo**: `deploy/deploy-stat.sh /percorso/file-password` — build frontend,
++  rigenera SQLite (`aggregate_to_sqlite.py`), push S3, install su EC2 via SSM (venv, systemd,
++  vhost, htpasswd con solo hash apr1 — mai password in chiaro).
++- **Refresh dati "live"**: `deploy/push-stats.sh` — rigenera e spedisce il solo `stats.db`
++  (i registry vivono sulla macchina dev). Da lanciare dopo le sessioni di lavoro o in cron.
++- **DNS**: record `stat.florenceegi.com` su Route 53 → ALB (procedura SSOT in EGI-DOC,
++  `ROUTE53_SUBDOMAIN_PROCEDURE.md`).
++- **Test**: `tests/m-266/test_public_site_stats.sh`.
++
++---
++
++## Deployment su Laravel Forge (legacy — superato da M-266)
+ 
+ Se usi **Laravel Forge su AWS**, segui questi step:
+ 

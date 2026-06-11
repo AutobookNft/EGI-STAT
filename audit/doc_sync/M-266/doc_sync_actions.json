@@ -1,0 +1,46 @@
+{
+  "mission_id": "M-266",
+  "actions": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "mode": "additive",
+      "status": "applied",
+      "ssot_content_hash": "192ed353f57b13eb74c3edc3c3ce94a5b775bdd3db3f4aa6da3fb8080ef5c187",
+      "diff_path": "audit/doc_sync/M-266/diffs/MULTI_REGISTRY.md.diff",
+      "justification": "Doc canonico pipeline SQLite serving: aggiunta sezione '### Endpoint pubblico aggregato — /api/public/site-stats (M-266)' prima di ## Test. Nessun contenuto esistente modificato.",
+      "timestamp": "2026-06-11T20:03:00Z",
+      "resolution_method": "auto_additive"
+    },
+    {
+      "ssot_path": "backend/TIME_ENTRIES_FORMAT.md",
+      "mode": "additive",
+      "status": "applied",
+      "ssot_content_hash": "30013c539f0eb45102871f91c07b9fa158f2282f45aa2af9a8bfe7d84da3d9d2",
+      "diff_path": "audit/doc_sync/M-266/diffs/TIME_ENTRIES_FORMAT.md.diff",
+      "justification": "Sezione §Serving: aggiunto paragrafo sul secondo consumer di time_entries (GET /api/public/site-stats, solo totali, mai nomi progetto). Nessun contenuto esistente modificato.",
+      "timestamp": "2026-06-11T20:03:00Z",
+      "resolution_method": "auto_additive"
+    },
+    {
+      "ssot_path": "README.md",
+      "mode": "additive",
+      "status": "applied",
+      "ssot_content_hash": "5ee655c4feadb082c09bd0042171708ccb7c9f551e7007333c387f9e7fc27112",
+      "diff_path": "audit/doc_sync/M-266/diffs/README.md.diff",
+      "justification": "Aggiunta sezione '## Deploy corrente — stat.florenceegi.com (M-266)' prima della sezione Forge. UNICA modifica a testo esistente: annotazione header '## Deployment su Laravel Forge' -> '(legacy — superato da M-266)' per evitare due deploy dichiarati 'correnti' (coerenza semantica). Annotazione segnalata all'operatore per ratifica nel summary — contenuto della sezione legacy intatto.",
+      "timestamp": "2026-06-11T20:03:00Z",
+      "resolution_method": "auto_additive_with_header_annotation",
+      "residuals_noted": "Righe 15/38/56 README citano Postgres per la pipeline ingestion v1: staleness pre-esistente FUORI scope M-266 (anti-pattern 9) — candidata a mission di rewrite README, non bloccante."
+    },
+    {
+      "ssot_path": "CLAUDE.md",
+      "mode": "no_change",
+      "status": "no_change",
+      "ssot_content_hash": "1136a7a746b8d9911e6e217d08b3a631d6a0e2329ff5f072a56aa189ccebab3d",
+      "diff_path": "audit/doc_sync/M-266/diffs/CLAUDE.md.diff",
+      "justification": "Aggiornato DENTRO la mission M-266 (audit R2 assorbita): header deploy stat.florenceegi.com + ruolo (SQLite serving shipped, Postgres legacy) + stack (gunicorn :5055) + vincolo privacy endpoint pubblico. Verificato contro il diff codice: coerente e completo — nessun intervento DOC-SYNC necessario. Grep residui: 'non deployato pubblicamente' assente.",
+      "timestamp": "2026-06-11T20:03:00Z",
+      "resolution_method": "verified_no_change"
+    }
+  ]
+}

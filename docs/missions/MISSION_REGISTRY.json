@@ -13,16 +13,86 @@
       "id": "M-266",
       "title": "stat.florenceegi.com: deploy EGI-STAT dietro basic auth + endpoint pubblico /api/public/site-stats per fabiocherici.com",
       "trigger_matrix": 2,
-      "status": "executing",
+      "status": "closed",
       "date_open": "2026-06-11",
-      "date_close": null,
+      "date_close": "2026-06-11",
       "scope_hash": "65608f95c756b0f4cf1941d14b2941b8b7f340a088af7315fd17d205d972a130",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-11T19:43:03.329Z",
+      "last_engine_sync": "2026-06-11T20:05:15.954Z",
       "ssot_waiver": {
         "reason": "Endpoint pubblico aggregato read-only su pattern stats_v2 esistente (M-234/M-OS3-086) + vhost pattern tmp-le-vespe (M-LEVESPE-020); fonti lette e citate nel codice",
         "at": "2026-06-11T19:43:03.326Z",
         "by": "supervisor"
+      },
+      "report_technical": "docs/missions/M-266_STAT_SUBDOMAIN_REPORT_TECHNICAL.md",
+      "report_extended": "docs/missions/M-266_STAT_SUBDOMAIN_REPORT_EXTENDED.md",
+      "doc_sync_executed": true,
+      "doc_sync_outcome": "success",
+      "doc_sync_version": "2.2.0",
+      "doc_sync_rag_mode": "skipped_no_schema",
+      "doc_sync_ssot_registry": "absent_registry_less_mode",
+      "doc_sync_ssots_impacted_direct": 4,
+      "doc_sync_ssots_impacted_lateral": 0,
+      "doc_sync_ssots_modified_additive": 3,
+      "doc_sync_ssots_modified_substitutive": 0,
+      "doc_sync_ssots_no_change": 1,
+      "doc_sync_audit_path": "audit/doc_sync/M-266/",
+      "doc_verified": true,
+      "doc_verified_date": "2026-06-11",
+      "doc_sync_log": {
+        "agent": "doc-sync-v2",
+        "tool_use_id": "toolu_01YF5Y9EZVwLPUiRfTBw5ffu",
+        "output_hash": "6f7670aafca9d299b57b37e4ff12ce2a1e17e6485e863609d1bcca6a17a2478d",
+        "date": "2026-06-11T20:05:15.952Z",
+        "outcome": "success"
+      },
+      "organs": [
+        "EGI-DOC",
+        "EGI-STAT"
+      ],
+      "stats": {
+        "total_commits": 2,
+        "lines_added": 249,
+        "lines_deleted": 0,
+        "lines_net": 249,
+        "lines_touched": 249,
+        "files_touched": 6,
+        "weighted_commits": 1.7,
+        "cognitive_load": 2.43,
+        "productivity_index": 17.26,
+        "tags_breakdown": {
+          "FEAT": 1,
+          "CONFIG": 1
+        },
+        "commit_hashes": [
+          "8c1ec9e7b13451be43e5a699c599d9ceab58843a",
+          "a169a38266394c703141768c5ef6393db17ea1b0"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-11",
+            "commits": 1,
+            "lines_added": 248,
+            "lines_deleted": 0,
+            "files_touched": 5,
+            "tags": {
+              "FEAT": 1
+            }
+          },
+          {
+            "repo": "florenceegi/EGI-DOC",
+            "date": "2026-06-11",
+            "commits": 1,
+            "lines_added": 1,
+            "lines_deleted": 0,
+            "files_touched": 1,
+            "tags": {
+              "CONFIG": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-11"
       }
     },
     {
@@ -74,7 +144,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-09"
+        "calculated_at": "2026-06-11"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -125,7 +195,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-09"
+        "calculated_at": "2026-06-11"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -208,7 +278,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-09"
+        "calculated_at": "2026-06-11"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -233,22 +303,24 @@
         "EGI"
       ],
       "stats": {
-        "total_commits": 3,
-        "lines_added": 344,
+        "total_commits": 5,
+        "lines_added": 896,
         "lines_deleted": 178,
-        "lines_net": 166,
-        "lines_touched": 522,
-        "files_touched": 15,
-        "weighted_commits": 3.8,
-        "cognitive_load": 2.74,
-        "productivity_index": 19.95,
+        "lines_net": 718,
+        "lines_touched": 1074,
+        "files_touched": 19,
+        "weighted_commits": 5.4,
+        "cognitive_load": 2.96,
+        "productivity_index": 42.48,
         "tags_breakdown": {
           "FIX": 2,
-          "DOC": 1
+          "DOC": 3
         },
         "commit_hashes": [
           "09cc7e6a32badfc3013ecdbe3a24635112ea0f11",
           "5404aa8247f32617f0a3947618ce2652b85b8024",
+          "7e77a3279d099542e3a8f4016363739f40a9c04f",
+          "a1de0eb25e8464c51990c26b251b9d11ccf6fc6c",
           "f39fd3c291792387a2c5fa3df8d90d624d67ba82"
         ],
         "by_repo_day": [
@@ -284,9 +356,20 @@
             "tags": {
               "DOC": 1
             }
+          },
+          {
+            "repo": "florenceegi/EGI-DOC",
+            "date": "2026-06-11",
+            "commits": 2,
+            "lines_added": 552,
+            "lines_deleted": 0,
+            "files_touched": 4,
+            "tags": {
+              "DOC": 2
+            }
           }
         ],
-        "calculated_at": "2026-06-09"
+        "calculated_at": "2026-06-11"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -584,7 +667,7 @@
         "lines_net": 476,
         "lines_touched": 476,
         "files_touched": 10,
-        "weighted_commits": 1,
+        "weighted_commits": 1.0,
         "cognitive_load": 2.54,
         "productivity_index": 22.65,
         "tags_breakdown": {
@@ -606,7 +689,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-09"
+        "calculated_at": "2026-06-11"
       },
       "organs": [
         "EGI-STAT"
@@ -704,7 +787,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-09"
+        "calculated_at": "2026-06-11"
       },
       "organs": [
         "EGI-DOC",

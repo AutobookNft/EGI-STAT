@@ -1,0 +1,40 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 4ca0ab0..b336023 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -6,7 +6,9 @@
+ 
+ > Dashboard produttività sviluppatori FlorenceEGI.
+ > Analizza attività GitHub, classifica commit per tag OS3, calcola Indice di Produttività.
+-> Path locale: /home/fabio/EGI-STAT/ | Strumento interno — non deployato pubblicamente
++> Path locale: /home/fabio/EGI-STAT/ | Deploy: stat.florenceegi.com (M-266)
++> Dashboard + API interne dietro BASIC AUTH; UNICO endpoint pubblico:
++> /api/public/site-stats (aggregato minimo per fabiocherici.com — MAI nomi progetto)
+ 
+ ---
+ 
+@@ -16,17 +18,22 @@ EGI-STAT è uno strumento interno di osservabilità dell'ecosistema FlorenceEGI.
+ Legge i commit GitHub di tutti gli organi, li classifica per tag OS3 (`[FEAT]`, `[FIX]`, ...),
+ calcola metriche aggregate (Indice di Produttività, Carico Cognitivo) e le espone via API + dashboard.
+ 
+-Non impatta gli altri organi — è read-only su GitHub, ha il suo DB PostgreSQL separato.
++Non impatta gli altri organi — è read-only su GitHub, ha il suo DB separato
++(SQLite serving `backend/data/stats.db`, rigenerato dai registry locali; Postgres = legacy).
++Sull'EC2 il DB è SHIPPED dalla macchina dev via `deploy/push-stats.sh` (i registry vivono qui).
+ 
+ ---
+ 
+ ## 🏗️ Stack
+ 
+ ```
+-Backend  → Python + Flask + PostgreSQL
++Backend  → Python + Flask + SQLite serving (stats.db; Postgres legacy)
+            API REST per metriche aggregate (giornaliere e settimanali)
++           Prod: gunicorn 127.0.0.1:5055 (systemd egi-stat) dietro nginx
+ Frontend → React + Vite
+            SPA dashboard con grafici e tabelle interattive
++Privacy  → /api/public/site-stats: SOLO totali aggregati, MAI nomi
++           progetto/mission (vincolo M-266); CORS solo fabiocherici.com
+ ```
+ 
+ ---

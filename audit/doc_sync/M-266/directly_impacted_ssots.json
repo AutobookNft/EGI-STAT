@@ -1,0 +1,37 @@
+{
+  "mission_id": "M-266",
+  "mode": "registry_less_degraded",
+  "note": "docs/lso/SSOT_REGISTRY.json ASSENTE in EGI-STAT (organo livello 3, LSO ridotto). Il chiamante mission ha fornito esplicitamente l'insieme candidato di doc (README, doc backend MULTI_REGISTRY/TIME_ENTRIES_FORMAT, doc deploy). Identificazione fatta per analisi semantica diretta dei contenuti (grep endpoint/serving/deploy) invece che per watches.paths del registry.",
+  "impacted": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "impact_type": "semantic_content_match",
+      "reason": "E il doc canonico della pipeline SQLite serving + endpoint stats_v2 (M-225/M-OS3-086/M-234/M-237/M-239). M-266 aggiunge un nuovo consumer del serving (public_stats.site_stats su _connect/_CLOSED_WHERE/time_entries/lines_net) e un nuovo endpoint /api/public/site-stats: il doc e ora incompleto."
+    },
+    {
+      "ssot_path": "backend/TIME_ENTRIES_FORMAT.md",
+      "impact_type": "semantic_content_match",
+      "reason": "La sezione Serving elenca gli endpoint che leggono time_entries (solo GET /api/v2/stats/hours). M-266 aggiunge un secondo consumer pubblico aggregato: incompleto."
+    },
+    {
+      "ssot_path": "README.md",
+      "impact_type": "semantic_content_match",
+      "reason": "Sezione Deployment descrive solo il deploy legacy Forge/sslip.io (Postgres v1). M-266 introduce il deploy corrente stat.florenceegi.com (deploy-stat.sh, push-stats.sh, endpoint pubblico): incompleto."
+    },
+    {
+      "ssot_path": "CLAUDE.md",
+      "impact_type": "direct_watcher_equivalent",
+      "reason": "Gia aggiornato DENTRO la mission M-266 (audit R2 assorbita). Verificato contro il diff: contenuto coerente con codice (deploy, SQLite serving shipped, vincolo privacy)."
+    }
+  ],
+  "not_impacted": [
+    {
+      "ssot_path": "frontend/README.md",
+      "reason": "Nessun riferimento a serving/endpoint/deploy backend; il frontend non e toccato da M-266 (solo build nel deploy script)."
+    },
+    {
+      "ssot_path": "backend/POSTGRES_DECOMMISSION_ANALYSIS.md",
+      "reason": "Analisi storica decommission Postgres; M-266 non cambia lo stato del decommission."
+    }
+  ]
+}

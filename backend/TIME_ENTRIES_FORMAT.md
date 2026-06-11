@@ -71,5 +71,10 @@ stesso file con lo stesso contratto.
 commit_minutes}` ordinata per minuti. Meta SQLite: `time_entries_manual`,
 `time_entries_commit`.
 
+Da M-266 `time_entries` alimenta anche l'aggregato **pubblico** `GET /api/public/site-stats`
+(`public_stats.site_stats()` — widget fabiocherici.com): SOLO totali `hours_total` /
+`hours_last_7_days` e conteggi progetti, **mai nomi progetto** (vincolo privacy M-266).
+Dettaglio: `MULTI_REGISTRY.md` §Endpoint pubblico aggregato.
+
 ## Primo dato reale
 Capasso: 300 min (`incontro Stefania`, `M-LEDGER-CAPASSO`) + stima-commit.

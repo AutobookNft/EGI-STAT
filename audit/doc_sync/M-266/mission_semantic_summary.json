@@ -1,0 +1,55 @@
+{
+  "mission_id": "M-266",
+  "analyzed_at": "2026-06-11T20:30:00Z",
+  "scope": "stat.florenceegi.com: deploy EGI-STAT dietro basic auth + endpoint pubblico /api/public/site-stats per fabiocherici.com",
+  "new_functions": [
+    {
+      "symbol": "backend/public_stats.py::site_stats()",
+      "purpose": "Aggregato PUBBLICO minimo (ore totali/7gg, conteggio progetti, righe nette mission+legacy, ultima attivita) per il widget cantiere di fabiocherici.com. Legge lo SQLite serving via stats_v2._connect/_CLOSED_WHERE. Vincolo privacy: MAI nomi progetto/mission.",
+      "type": "created"
+    },
+    {
+      "symbol": "backend/api.py::get_public_site_stats()",
+      "purpose": "Route GET /api/public/site-stats. Errori generici 'stats unavailable' senza dettagli interni (audit R1), dettaglio solo nel log server-side.",
+      "type": "created"
+    }
+  ],
+  "removed_functions": [],
+  "behavior_changes": [
+    {
+      "symbol": "backend/api.py::_no_store_api (after_request)",
+      "change": "Split: /api/public/* riceve Cache-Control public max-age=60 SOLO su status 200 (errori no-store, audit R1) + Access-Control-Allow-Origin https://fabiocherici.com + Vary: Origin. Il resto di /api/ resta no-store come prima."
+    }
+  ],
+  "new_infrastructure": [
+    {
+      "artifact": "deploy/nginx/stat.florenceegi.com.conf",
+      "purpose": "vhost nginx (TLS all'ALB, listen 80): TUTTO dietro basic auth (.htpasswd-egistat) TRANNE /api/public/ (no auth, rate-limit 10r/m burst 20) e /health (ALB check). Proxy a gunicorn 127.0.0.1:5055. X-Robots-Tag noindex."
+    },
+    {
+      "artifact": "deploy/systemd/egi-stat.service",
+      "purpose": "Unit gunicorn (user forge, bind 127.0.0.1:5055, 2 workers, api:app)."
+    },
+    {
+      "artifact": "deploy/deploy-stat.sh",
+      "purpose": "Deploy ripetibile (pattern tmp-le-vespe M-LEVESPE-002/020): build frontend + rigenera SQLite + push S3 + install EC2 via SSM (venv, systemd, vhost, htpasswd solo hash apr1, mai plaintext)."
+    },
+    {
+      "artifact": "deploy/push-stats.sh",
+      "purpose": "Push veloce del solo stats.db verso EC2 (dati cantiere live) — i registry vivono sulla macchina dev, il DB serving e SHIPPED."
+    },
+    {
+      "artifact": "DNS stat.florenceegi.com",
+      "purpose": "Record Route53 creato (procedura SSOT EGI-DOC ROUTE53_SUBDOMAIN_PROCEDURE.md, gia aggiornata e pushata in altra sede)."
+    }
+  ],
+  "narrative_changes": [
+    {
+      "doc": "CLAUDE.md",
+      "change": "Aggiornato DENTRO la mission (audit R2 assorbita): header deploy stat.florenceegi.com, ruolo (SQLite serving shipped via push-stats.sh, Postgres legacy), stack (gunicorn :5055), vincolo privacy endpoint pubblico."
+    }
+  ],
+  "tests": [
+    "tests/m-266/test_public_site_stats.sh — locale GREEN (2.242,8h reali), live RED fino a deploy"
+  ]
+}

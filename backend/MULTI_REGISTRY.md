@@ -162,6 +162,24 @@ per-project. Rimosso il codice morto (`project_of_organ`, query `organ_of_hash`,
 `commits`/`sessions` = `list[datetime]`; Pilastro 2). Totale stima-commit **invariato** (21455 min):
 cambia la ripartizione, non il monte-ore. Test: `EGI-DOC/docs/tests/m-239/test_hours_per_repo.sh`.
 
+### Endpoint pubblico aggregato — `/api/public/site-stats` (M-266, 2026-06-11)
+Primo (e unico) endpoint **senza basic auth** del deploy `stat.florenceegi.com`: alimenta il
+widget "cantiere aperto" di fabiocherici.com. `backend/public_stats.py::site_stats()` legge lo
+**stesso SQLite serving** di stats_v2 (`stats_v2._connect`, `_CLOSED_WHERE`) e restituisce **SOLO
+totali**: `hours_total` / `hours_last_7_days` (da `time_entries`, con `hours_note:
+"manual + commit-estimate"` — onestà epistemica P0-3), `projects_total` / `projects_active_30d`
+(COUNT DISTINCT), `lines_net_total` (mission chiuse + `legacy_production` M-OS3-086, tabella
+assente tollerata), `last_activity`, `generated_at`. **Vincolo privacy (by design): MAI nomi
+progetto/mission** — il dettaglio resta nella dashboard dietro basic auth.
+
+Difese (audit M-266 R1): in `api.py` l'`after_request` è **split** — `/api/public/*` riceve
+`Cache-Control: public, max-age=60` **solo su status 200** (errori `no-store`),
+`Access-Control-Allow-Origin: https://fabiocherici.com` + `Vary: Origin`; il resto di `/api/`
+resta no-store. Errori dell'endpoint → risposta **generica** `{"error": "stats unavailable"}`
+(dettaglio solo nel log server-side). Lato nginx (`deploy/nginx/stat.florenceegi.com.conf`):
+`location /api/public/` con `auth_basic off` + rate-limit `10r/m` burst 20.
+Test: `tests/m-266/test_public_site_stats.sh`.
+
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
 conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).
