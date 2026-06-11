@@ -10,6 +10,22 @@
   },
   "missions": [
     {
+      "id": "M-267",
+      "title": "Fix M-266: VITE_API_BASE_URL punta a host sslip morto — dashboard vuota su stat.florenceegi.com",
+      "trigger_matrix": 1,
+      "ssot_waiver": {
+        "reason": "Fix config build (1 riga env): regressione M-266 individuata da CEO, host sslip morto residuo pre-M-266",
+        "at": "2026-06-11T20:17:47.532Z",
+        "by": "supervisor"
+      },
+      "status": "executing",
+      "date_open": "2026-06-11",
+      "date_close": null,
+      "scope_hash": "f57159b9d85bd8193b9f9502be9741de287799f33ced5c238581e12100815bf9",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-11T20:17:47.535Z"
+    },
+    {
       "id": "M-266",
       "title": "stat.florenceegi.com: deploy EGI-STAT dietro basic auth + endpoint pubblico /api/public/site-stats per fabiocherici.com",
       "trigger_matrix": 2,
@@ -667,7 +683,7 @@
         "lines_net": 476,
         "lines_touched": 476,
         "files_touched": 10,
-        "weighted_commits": 1.0,
+        "weighted_commits": 1,
         "cognitive_load": 2.54,
         "productivity_index": 22.65,
         "tags_breakdown": {
@@ -796,5 +812,5 @@
       ]
     }
   ],
-  "counter": 266
+  "counter": 267
 }
