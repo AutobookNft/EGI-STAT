@@ -18,12 +18,48 @@
         "at": "2026-06-11T20:17:47.532Z",
         "by": "supervisor"
       },
-      "status": "executing",
+      "status": "closed",
       "date_open": "2026-06-11",
-      "date_close": null,
+      "date_close": "2026-06-11",
       "scope_hash": "f57159b9d85bd8193b9f9502be9741de287799f33ced5c238581e12100815bf9",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-11T20:17:47.535Z"
+      "last_engine_sync": "2026-06-11T20:33:43.128Z",
+      "report_technical": "docs/missions/M-267_FIX_API_BASE_REPORT_TECHNICAL.md",
+      "report_extended": "docs/missions/M-267_FIX_API_BASE_REPORT_EXTENDED.md",
+      "organs": [
+        "EGI-STAT"
+      ],
+      "stats": {
+        "total_commits": 1,
+        "lines_added": 30,
+        "lines_deleted": 0,
+        "lines_net": 30,
+        "lines_touched": 30,
+        "files_touched": 1,
+        "weighted_commits": 1.5,
+        "cognitive_load": 1.8,
+        "productivity_index": 9.98,
+        "tags_breakdown": {
+          "FIX": 1
+        },
+        "commit_hashes": [
+          "f9c46a15d317d8889bb5319872d982507edc4db0"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-11",
+            "commits": 1,
+            "lines_added": 30,
+            "lines_deleted": 0,
+            "files_touched": 1,
+            "tags": {
+              "FIX": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-11"
+      }
     },
     {
       "id": "M-266",
@@ -67,20 +103,22 @@
         "EGI-STAT"
       ],
       "stats": {
-        "total_commits": 2,
-        "lines_added": 249,
-        "lines_deleted": 0,
-        "lines_net": 249,
-        "lines_touched": 249,
-        "files_touched": 6,
-        "weighted_commits": 1.7,
-        "cognitive_load": 2.43,
-        "productivity_index": 17.26,
+        "total_commits": 3,
+        "lines_added": 570,
+        "lines_deleted": 6,
+        "lines_net": 564,
+        "lines_touched": 576,
+        "files_touched": 14,
+        "weighted_commits": 2.5,
+        "cognitive_load": 2.74,
+        "productivity_index": 29.69,
         "tags_breakdown": {
+          "DOC": 1,
           "FEAT": 1,
           "CONFIG": 1
         },
         "commit_hashes": [
+          "49de4adf59a319a993483cf08861cbf525bdfae9",
           "8c1ec9e7b13451be43e5a699c599d9ceab58843a",
           "a169a38266394c703141768c5ef6393db17ea1b0"
         ],
@@ -88,11 +126,12 @@
           {
             "repo": "AutobookNft/EGI-STAT",
             "date": "2026-06-11",
-            "commits": 1,
-            "lines_added": 248,
-            "lines_deleted": 0,
-            "files_touched": 5,
+            "commits": 2,
+            "lines_added": 569,
+            "lines_deleted": 6,
+            "files_touched": 13,
             "tags": {
+              "DOC": 1,
               "FEAT": 1
             }
           },
@@ -683,7 +722,7 @@
         "lines_net": 476,
         "lines_touched": 476,
         "files_touched": 10,
-        "weighted_commits": 1,
+        "weighted_commits": 1.0,
         "cognitive_load": 2.54,
         "productivity_index": 22.65,
         "tags_breakdown": {
