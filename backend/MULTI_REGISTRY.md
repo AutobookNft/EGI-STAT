@@ -180,6 +180,37 @@ resta no-store. Errori dell'endpoint → risposta **generica** `{"error": "stats
 `location /api/public/` con `auth_basic off` + rate-limit `10r/m` burst 20.
 Test: `tests/m-266/test_public_site_stats.sh`.
 
+## Mission IN CORSO — tabella `missions_open` + endpoint (M-FUC-054, 2026-06-16, ADDITIVO)
+Accanto alle mission **delivered** (tabella `missions`, asse produzione) il serving espone ora le mission
+**IN CORSO** (WIP) per il cockpit Nexus. `aggregate_to_sqlite.py` aggiunge una **tabella additiva**
+**`missions_open`** (`id, organ, title, raw_status, mission_type, date_opened, discovered_at`; PK
+`(organ, id)`; indici su `organ` e `raw_status`), popolata da un **Pass DEDICATO** (dopo Pass1/Pass2) che
+ri-scorre **gli stessi** registry via `insert_open_mission` → `ecosystem.normalize_open_mission`. Path
+**completamente separato** da `insert_mission`/`normalize_mission`: NON scrive in `missions` né nelle sue
+child-table → **conteggi prod identici** (vincolo CEO). Nessuna chiamata git (O(mission)). In `DROP_TABLES`
+(full-rebuild ricostruisce anche questa). Meta: `missions_open_count`.
+
+**Chi è "in corso" (partizione disgiunta da `missions`, anti-doppio-conteggio H3).** `normalize_open_mission`
+ritorna `{id, title, raw_status, date_opened, mission_type}` SSE: la mission ha un `id`; ha uno `status`
+engine-EN con **`status_is_open(status)`** True (presente in `MISSION_STATUS_TAXONOMY` con `terminal==false
+AND counts_as_production==false`, **escluso `perpetual`** = registro non-chiudibile, non WIP); e **NON** è
+delivered. La regola *delivered* è stata **estratta** in **`ecosystem._is_delivered(m)`** (data di chiusura
+valida — non `None`/`""`/`"pending"`, su entrambi gli schemi `data_chiusura`/`date_close`) e **condivisa** tra
+`normalize_mission` (prod) e `normalize_open_mission` (WIP) — refactor **neutro** così i due path **non possono
+divergere** sul confine delivered↔open. Registry **legacy-IT senza `status` engine** → None (non hanno lo
+status-engine che distingue draft/executing/auditing). **Loud-on-unknown** coerente con
+`status_counts_as_production`: status fuori-tassonomia → warning stderr + `False` (mai sparizione silenziosa,
+M-OS3-090). Verificato: **496 delivered / 28 open / 0 intersezione**.
+
+Serving: **`stats_v2.open_missions()`** legge SOLO `missions_open`, ordine **esplicito** (P0-3)
+`date_opened DESC, organ, id`, shape per il cockpit `[{mission_id, organ, title, status, mission_type,
+date_opened}]` (mapping `raw_status→status`, `id→mission_id`), esposto da
+**`GET /api/v2/stats/missions_open`** (`api.py::get_v2_missions_open`, stesso pattern try/except degli
+endpoint v2). **Confine** (Pilastro 3): è una vista aggiuntiva di lettura (mission *non ancora* produzione),
+mai sommata ai `weighted_commits`, fuori da `_CLOSED_WHERE` e dalla time-series. Test P0-13
+`tests/m_fuc_054_open_missions_test.py` **13/13 GREEN** (7 nuovi + 6 invariante m_248). SSOT canonico:
+`os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md` §Mission IN CORSO.
+
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
 conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).
