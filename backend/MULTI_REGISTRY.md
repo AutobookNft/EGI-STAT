@@ -211,6 +211,28 @@ mai sommata ai `weighted_commits`, fuori da `_CLOSED_WHERE` e dalla time-series.
 `tests/m_fuc_054_open_missions_test.py` **13/13 GREEN** (7 nuovi + 6 invariante m_248). SSOT canonico:
 `os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md` §Mission IN CORSO.
 
+## Copertura di INSTRUMENTAZIONE dei repo — scanner ship-with-push (M-FUC-057, 2026-06-16, ADDITIVO)
+> Distinto dalla "Copertura repo nei grafici giornalieri" (M-222, sopra): qui si misura **quali repo git sono
+> instrumentati** per le stat, non i dati per-giorno. La discovery delle stat vede solo i repo in
+> `~/oracode-engine/projects.json`; un repo git **senza** `.oracode/project.json` è invisibile.
+>
+> **`backend/coverage_scan.py`** (NUOVO) fa il walk dei repo git sotto `COVERAGE_SCAN_ROOT` (default `~`, salta
+> dotdir) e li confronta con `projects.json` + i descrittori, classificando: **`instrumented`** (descrittore + in
+> projects.json), **`orphan_descriptor`** (ha descrittore ma NON in projects.json → mission non contate finché non
+> si apre una mission da lì), **`uninstrumented`** (git senza descrittore → fuori dalle stat), **`index_pollution`**
+> (voci projects.json con root `/tmp` o inesistente → drift dell'indice da bonificare). Output `data/coverage.json`
+> (o `--print` su stdout). Campi: `generated_at`, `instrumented`, `uninstrumented`, `orphan_descriptor`,
+> `index_pollution` (liste).
+>
+> **Vincolo topologico (REGOLA ZERO).** I repo vivono sul **laptop**; il cockpit gira sul **server** EC2 che non
+> li ha → scan server-side = falsa. Quindi **ship-with-push**: la scansione gira sul laptop e `coverage.json`
+> viaggia col push stat esistente. **`deploy/push-stats-nexus.sh`** (MODIFICATO): step **1b** genera `coverage.json`
+> + step **2b** `s3 cp`; il pull SSM lo tira giù sul server. **Best-effort, event-driven (open/close), NESSUN cron.**
+> Il cockpit (`nexus-cockpit`) lo legge via `cockpit_reads.coverage()` + `GET /api/cockpit/coverage` con
+> `partial:true` se non ancora arrivato (no falso-verde). Risultato reale M-FUC-057: **16 uninstrumented / 1 orphan
+> (`nexus-cockpit`) / 3 index_pollution (TESTPROJ)**. Test P0-13 `tests/M-FUC-057/coverage-ship.test.sh` (in Fucina)
+> GREEN 5/5. SSOT canonico: `os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md` §Copertura.
+
 ## Test
 `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
 conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).
