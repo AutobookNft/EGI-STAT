@@ -395,6 +395,20 @@ def get_v2_missions():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/v2/stats/missions_open', methods=['GET'])
+def get_v2_missions_open():
+    """M-FUC-054 (ADDITIVO): mission IN CORSO (WIP) per il cockpit Nexus.
+
+    Espone la tabella additiva missions_open (partizione disgiunta da `missions`):
+    NON altera i conteggi prod. Shape: [{mission_id,organ,title,status,
+    mission_type,date_opened}]. Stesso pattern try/except degli endpoint v2."""
+    from stats_v2 import open_missions
+    try:
+        return jsonify(open_missions())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/public/site-stats', methods=['GET'])
 def get_public_site_stats():
     """Aggregato PUBBLICO per il widget cantiere di fabiocherici.com — M-266.

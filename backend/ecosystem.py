@@ -57,6 +57,68 @@ def status_counts_as_production(raw_status):
     return False
 
 
+def _is_delivered(m):
+    """Regola H3 UNICA condivisa (M-248, decisione CEO 2026-06-08): una mission è
+    "delivered" (lavoro consegnato, conta come produzione) sse ha una data di
+    chiusura VALIDA — non None, non vuota, non 'pending'. Accetta entrambi gli
+    schemi: legacy-IT 'data_chiusura' e engine-EN 'date_close'.
+
+    M-FUC-054 (R1): estratta come funzione condivisa così che `normalize_mission`
+    (path prod) e `normalize_open_mission` (feature additiva) NON possano divergere
+    sulla definizione di delivered. Refactor neutro: stessa logica già inline in
+    normalize_mission, qui resa single-source."""
+    date_close_raw = m.get("data_chiusura") or m.get("date_close")
+    return date_close_raw not in (None, "", "pending")
+
+
+def status_is_open(raw_status):
+    """True sse lo status indica una mission IN CORSO (WIP): presente in
+    STATUS_TAXONOMY con terminal==False AND counts_as_production==False, ESCLUSO
+    'perpetual' (registro non chiudibile — non è WIP, decisione M-FUC-054).
+
+    Loud-on-unknown coerente con status_counts_as_production: uno status non in
+    tassonomia GRIDA su stderr e ritorna False (mai sparizione silenziosa, M-OS3-090)."""
+    if raw_status == "perpetual":
+        return False  # registro perpetuo: terminal=false ma NON è WIP — escluso esplicitamente
+    if raw_status in STATUS_TAXONOMY:
+        spec = STATUS_TAXONOMY[raw_status]
+        return (not spec.get("terminal")) and (not spec.get("counts_as_production"))
+    UNKNOWN_STATUSES.add(raw_status)
+    sys.stderr.write(
+        f"⚠⚠ STATUS SCONOSCIUTO '{raw_status}' — assente da MISSION_STATUS_TAXONOMY.json. "
+        f"Mission NON classificata come in-corso finché non lo mappi. AGGIORNA la tassonomia! "
+        f"(M-OS3-090 loud-on-unknown / M-FUC-054)\n"
+    )
+    return False
+
+
+def normalize_open_mission(m):
+    """Forma canonica MINIMA di una mission IN CORSO per il cockpit Nexus (M-FUC-054).
+
+    Ritorna {id,title,raw_status,date_opened,mission_type} SOLO se:
+      - la mission ha un id;
+      - ha uno 'status' (campo engine-EN) con status_is_open(status) True;
+      - NON è delivered (not _is_delivered(m)) — partizione mutuamente esclusiva
+        con la tabella `missions` (anti-doppio-conteggio H3).
+    Altrimenti None. I registry legacy-IT senza 'status' engine → None (coerente:
+    non hanno lo status-engine che distingue draft/executing/auditing)."""
+    mid = m.get("mission_id") or m.get("id")
+    if not mid:
+        return None
+    status = m.get("status")
+    if not status or not status_is_open(status):
+        return None
+    if _is_delivered(m):
+        return None  # delivered → vive in `missions`, MAI in missions_open
+    return {
+        "id": mid,
+        "title": m.get("titolo") or m.get("title") or mid,
+        "raw_status": status,
+        "date_opened": m.get("data_apertura") or m.get("date_open"),
+        "mission_type": m.get("tipo_missione") or m.get("type") or "feature",
+    }
+
+
 def _project_root(registry_path):
     """dir-progetto = parent di docs/ (.../EGI-DOC/docs/missions/REG.json → .../EGI-DOC)."""
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(registry_path))))
@@ -189,8 +251,7 @@ def normalize_mission(m):
     # (es. 'auditing' = audit di chiusura in corso). date_close valorizzato = lavoro
     # consegnato. La tassonomia resta SSOT del SIGNIFICATO degli status; qui si
     # decide solo l'inclusione nelle statistiche di produzione.
-    date_close_raw = m.get("data_chiusura") or m.get("date_close")
-    delivered = date_close_raw not in (None, "", "pending")
+    delivered = _is_delivered(m)  # M-FUC-054 (R1): regola H3 single-source — refactor neutro
     status = m.get("status")
     if status:
         if not status_counts_as_production(status) and not delivered:

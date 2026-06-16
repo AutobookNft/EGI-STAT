@@ -142,11 +142,29 @@ SCHEMA = [
     )""",
     "CREATE INDEX idx_time_project ON time_entries(project)",
     "CREATE INDEX idx_time_source  ON time_entries(source)",
+
+    # 7) missions_open — feature ADDITIVA (M-FUC-054): mission IN CORSO (WIP) per il
+    #    cockpit Nexus. Popolata da un Pass DEDICATO (normalize_open_mission), MAI da
+    #    normalize_mission/insert_mission → ZERO impatto sui conteggi prod. Partizione
+    #    mutuamente esclusiva con `missions` (delivered → solo missions, mai qui).
+    """CREATE TABLE missions_open (
+        id            TEXT NOT NULL,
+        organ         TEXT NOT NULL,
+        title         TEXT,
+        raw_status    TEXT NOT NULL,              -- status grezzo (draft|planned|executing|auditing|auditing_failed)
+        mission_type  TEXT,
+        date_opened   TEXT,
+        discovered_at TEXT,                        -- timestamp UTC di scoperta (audit, non conteggio)
+        PRIMARY KEY (organ, id)
+    )""",
+    "CREATE INDEX idx_missions_open_organ  ON missions_open(organ)",
+    "CREATE INDEX idx_missions_open_status ON missions_open(raw_status)",
 ]
 
 DROP_TABLES = [
     "time_entries",
     "mission_commits", "mission_repo_day", "mission_tags", "mission_organs", "meta", "missions",
+    "missions_open",  # M-FUC-054: full-rebuild ricostruisce anche la tabella additiva
 ]
 
 
@@ -320,6 +338,36 @@ def insert_mission(conn, organ, registry_path, nm):
             "INSERT OR IGNORE INTO mission_organs (mission_organ, mission_id, organ_touched) VALUES (?,?,?)",
             (organ, mid, oc),
         )
+
+
+# ── Pass missions_open (M-FUC-054): mission IN CORSO, ADDITIVO ────────────────
+def insert_open_mission(conn, organ, registry_path, raw_mission):
+    """Inserisce una mission IN CORSO in missions_open SE — e solo se —
+    ecosystem.normalize_open_mission la riconosce come WIP non-delivered.
+
+    Path completamente SEPARATO da insert_mission: non tocca `missions` né le sue
+    figlie → i conteggi prod restano identici (vincolo CEO M-FUC-054). `organ`
+    canonicalizzato come per `missions` (M-OS3-060). NESSUNA chiamata git.
+    registry_path accettato per simmetria di firma/audit ma non persistito
+    (minimizzazione: il cockpit indicizza per organo+id). No-op se non WIP."""
+    nm = ecosystem.normalize_open_mission(raw_mission)
+    if nm is None:
+        return  # delivered, perpetual, terminale, senza id o senza status-engine → non WIP
+    organ = ecosystem.canonical_of(organ)
+    conn.execute(
+        """INSERT INTO missions_open (
+            id, organ, title, raw_status, mission_type, date_opened, discovered_at
+        ) VALUES (?,?,?,?,?,?,?)
+        ON CONFLICT(organ,id) DO UPDATE SET
+            title=excluded.title, raw_status=excluded.raw_status,
+            mission_type=excluded.mission_type, date_opened=excluded.date_opened,
+            discovered_at=excluded.discovered_at""",
+        (
+            nm["id"], organ, nm.get("title"), nm["raw_status"],
+            nm.get("mission_type"), nm.get("date_opened"),
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
 
 
 # ── Pass2: clustering anti-collisione (H1, M-248) ─────────────────────────────
@@ -673,7 +721,26 @@ def aggregate(db_path, verbose=False):
         n_manual = load_time_entries_manual(conn, instances)
         n_commit = estimate_commit_minutes(conn, instances)
 
+        # Pass missions_open (M-FUC-054, ADDITIVO): ri-scorre GLI STESSI registry e
+        # raccoglie le mission IN CORSO (WIP) via normalize_open_mission. Path
+        # SEPARATO da Pass1/Pass2: non scrive in `missions` → conteggi prod invariati.
+        # NESSUNA chiamata git (O(mission), come da design R2).
+        n_open = 0
+        for registry_path, organ in registries:
+            try:
+                reg = json.loads(Path(registry_path).read_text(encoding="utf-8"))
+            except Exception as exc:
+                print(f"  WARN: registry illeggibile (open pass) {registry_path}: {exc}", file=sys.stderr)
+                continue
+            for m in reg.get("missions") or []:
+                before = conn.total_changes
+                insert_open_mission(conn, organ, registry_path, m)
+                if conn.total_changes > before:
+                    n_open += 1
+
         write_meta(conn, len(registries), n_missions, organs, per_organ)
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
+                     ("missions_open_count", str(n_open)))
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
                      ("time_entries_manual", str(n_manual)))
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",

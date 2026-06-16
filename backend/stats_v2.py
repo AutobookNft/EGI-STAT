@@ -138,6 +138,39 @@ def completed_missions(registry=None):
     return out
 
 
+# ── Mission IN CORSO (M-FUC-054, ADDITIVO) ────────────────────────────────────
+def open_missions():
+    """Mission IN CORSO (WIP) dal serving SQLite — feature ADDITIVA M-FUC-054.
+
+    Legge SOLO la tabella `missions_open` (popolata dal Pass dedicato, partizione
+    mutuamente esclusiva con `missions`): NON tocca le funzioni/conteggi prod.
+    Ordine ESPLICITO (P0-3): date_opened DESC, poi organ, id (deterministico).
+    Shape per il cockpit Nexus: raw_status→'status', id→'mission_id'.
+    """
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, organ, title, raw_status, mission_type, date_opened
+            FROM missions_open
+            ORDER BY date_opened DESC, organ, id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "mission_id": r["id"],
+            "organ": r["organ"],
+            "title": r["title"] or "",
+            "status": r["raw_status"],
+            "mission_type": r["mission_type"] or "",
+            "date_opened": r["date_opened"],
+        }
+        for r in rows
+    ]
+
+
 def compute_mission_metrics(mission):
     """Mappa una mission (shape di completed_missions) alla metrica v2.0.
 
