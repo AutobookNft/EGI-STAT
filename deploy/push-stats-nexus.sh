@@ -18,15 +18,23 @@ ROOT="/home/fabio/EGI-STAT"
 # 1) rigenera l'aggregate dai registri (questo gia avveniva: era lo stats_refresh_cmd precedente)
 ( cd "$ROOT/backend" && python3 aggregate_to_sqlite.py >/dev/null 2>&1 ) || echo "[push-nexus] aggregate WARN" >&2
 
+# 1b) COPERTURA (M-FUC-057, ship-with-push): scansiona i repo SUL LAPTOP (dove vivono) e
+# produce coverage.json — la scansione lato server sarebbe falsa (repo laptop-only assenti).
+( cd "$ROOT/backend" && python3 coverage_scan.py >/dev/null 2>&1 ) || echo "[push-nexus] coverage WARN" >&2
+
 # 2) pubblica stats.db su S3 (laptop -> bucket; egi-hub-deploy/fabiocherici-deploy ha PutObject)
 aws s3 cp "$ROOT/backend/data/stats.db" "s3://${BUCKET}/stats.db" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
   || { echo "[push-nexus] s3 cp FALLITO (profilo $PROFILE)" >&2; exit 0; }
+
+# 2b) pubblica coverage.json su S3 (best-effort: la copertura non blocca lo stat)
+[ -f "$ROOT/backend/data/coverage.json" ] && aws s3 cp "$ROOT/backend/data/coverage.json" "s3://${BUCKET}/coverage.json" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
+  || echo "[push-nexus] coverage s3 cp WARN" >&2
 
 # 3) consegna al dev-server (EVENT-DRIVEN, no cron): l'EC2 tira giu via SSM (il suo ruolo ha GetObject)
 aws ssm send-command --profile "$PROFILE" --region "$REGION" --instance-ids "$INSTANCE" \
   --document-name "AWS-RunShellScript" \
   --comment "nexus stats push (mission close)" \
-  --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\"]" \
+  --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\",\"aws s3 cp s3://${BUCKET}/coverage.json ${DEST}/backend/data/coverage.json --region ${REGION} || true\"]" \
   --query 'Command.CommandId' --output text 2>/dev/null \
   || echo "[push-nexus] ssm send-command FALLITO (verifica perms ssm:SendCommand su $INSTANCE per $PROFILE)" >&2
 # best-effort: mai bloccare il finalize (exit 0)
