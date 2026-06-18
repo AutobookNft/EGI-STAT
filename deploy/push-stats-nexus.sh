@@ -37,5 +37,11 @@ aws ssm send-command --profile "$PROFILE" --region "$REGION" --instance-ids "$IN
   --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\",\"aws s3 cp s3://${BUCKET}/coverage.json ${DEST}/backend/data/coverage.json --region ${REGION} || true\"]" \
   --query 'Command.CommandId' --output text 2>/dev/null \
   || echo "[push-nexus] ssm send-command FALLITO (verifica perms ssm:SendCommand su $INSTANCE per $PROFILE)" >&2
+# 4) ATTUATORE vault Obsidian (M-OS3-109): auto-sync del "secondo cervello" a ogni ciclo mission.
+#    Best-effort: il fallimento NON blocca stat né mission. Instance-specific (vault del CEO via /mnt/c).
+#    Rigenera l'export arricchito + rsync additivo nel vault (esclude .obsidian).
+bash /home/fabio/os3-matrix/bin/export-ssot-to-vault >/dev/null 2>&1 \
+  || echo "[push-nexus] obsidian vault sync best-effort fallito (vault non montato?)" >&2
+
 # best-effort: mai bloccare il finalize (exit 0)
 exit 0
