@@ -84,8 +84,34 @@ def scan() -> dict:
     }
 
 
+def check(data: dict) -> tuple[int, list[str]]:
+    """Gate D6 (M-OS3-107): BLOCK se la copertura ha falle che nascondono repo
+    alle stat. exit 2 quando esiste index_pollution (residui /tmp o root
+    inesistenti) o orphan_descriptor (repo con descrittore fuori da
+    projects.json → invisibile alle stat finché non si apre una mission).
+    Decisione CEO 2026-06-19: orphan = BLOCK, non solo classificato. exit 0 solo
+    se entrambe le classi sono vuote."""
+    lines: list[str] = []
+    for p in data.get("index_pollution") or []:
+        lines.append(f"  index_pollution: {p.get('name')} — {p.get('root')} ({p.get('reason')})")
+    for o in data.get("orphan_descriptor") or []:
+        lines.append(f"  orphan_descriptor: {o} (descrittore presente ma fuori da projects.json)")
+    return (2 if lines else 0), lines
+
+
 def main(argv: list[str]) -> int:
     data = scan()
+    if "--check" in argv:
+        code, lines = check(data)
+        if code:
+            print("✗ coverage --check: FALLE di copertura (repo nascosti alle stat):",
+                  file=sys.stderr)
+            for l in lines:
+                print(l, file=sys.stderr)
+        else:
+            print("✓ coverage --check: nessuna falla (0 pollution, 0 orphan).",
+                  file=sys.stderr)
+        return code
     if "--print" in argv:
         print(json.dumps(data, indent=2, ensure_ascii=False))
         return 0
