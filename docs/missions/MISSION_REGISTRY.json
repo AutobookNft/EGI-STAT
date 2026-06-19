@@ -6,9 +6,118 @@
     "version": "1.0.0",
     "created": "2026-06-07",
     "note": "Mission mono-organo migrate dal centrale EGI-DOC. ID storici preservati; nuove mission usano id_prefix.",
-    "updated": "2026-06-11"
+    "updated": "2026-06-16"
   },
   "missions": [
+    {
+      "id": "M-FUC-057",
+      "title": "Vista Copertura repo on-demand nel cockpit: mappa i repo git senza .oracode/project.json (non instrumentati, fuori dalle stat) + descrittori non in projects.json",
+      "trigger_matrix": 3,
+      "design_waiver": {
+        "reason": "Scanner deterministico (walk filesystem + confronto con projects.json/descrittori), nessun design di dominio: groundato sulla topologia reale gia mappata (16 repo non-instrumentati identificati). Pattern ship-with-push gia esistente (push-stats-nexus.sh).",
+        "at": "2026-06-16T21:16:35.670Z",
+        "by": "supervisor"
+      },
+      "ssot_first_evidence": {
+        "path": "Fucina/docs/ssot/SSOT_DOMINI.md",
+        "ts": "2026-06-16T21:16:26Z"
+      },
+      "doc_sync_executed": true,
+      "doc_sync_log": {
+        "agent": "doc-sync-v2",
+        "tool_use_id": "toolu_01FiswfdihNMqrbFFiv6VsrK",
+        "output_hash": "861f2eac2cbacf8cd246ef847f97f3041842d4ef09254df8fdae67c882e3bbe6",
+        "date": "2026-06-16T21:32:18.290Z",
+        "outcome": "success"
+      },
+      "status": "closed",
+      "date_open": "2026-06-16",
+      "date_close": "2026-06-16",
+      "scope_hash": "bd6a802abb44eef28f259640eebd1cff945ded71e16612438a8d96d6c13208cf",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-16T21:32:18.293Z",
+      "organs": [
+        "os3-matrix",
+        "EGI-DOC",
+        "EGI-STAT",
+        "Fucina"
+      ],
+      "stats": {
+        "total_commits": 6,
+        "lines_added": 423,
+        "lines_deleted": 2,
+        "lines_net": 421,
+        "lines_touched": 425,
+        "files_touched": 11,
+        "weighted_commits": 5.4,
+        "cognitive_load": 2.75,
+        "productivity_index": 34.98,
+        "tags_breakdown": {
+          "DOC": 4,
+          "FEAT": 1,
+          "TEST": 1
+        },
+        "commit_hashes": [
+          "0e134224e8c1783e3d42529be9f52d384c155ad1",
+          "4a04e921d8cdb4f25a64667084058cf6c675758b",
+          "aa3df90e1bd6c3f2ed9bad9ea5fb6d0ea6f9dd28",
+          "b94f2eb2c28f63f9eafe6bcd75d42f5d2caa365e",
+          "cd8f85925025192fc34479704046f9e74709773c",
+          "d977b12e8a7b81f01aa1625d9a037b1b56d921f0"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-16",
+            "commits": 2,
+            "lines_added": 136,
+            "lines_deleted": 1,
+            "files_touched": 3,
+            "tags": {
+              "DOC": 1,
+              "FEAT": 1
+            }
+          },
+          {
+            "repo": "florenceegi/EGI-DOC",
+            "date": "2026-04-19",
+            "commits": 1,
+            "lines_added": 80,
+            "lines_deleted": 0,
+            "files_touched": 1,
+            "tags": {
+              "DOC": 1
+            }
+          },
+          {
+            "repo": "florenceegi/Fucina",
+            "date": "2026-06-16",
+            "commits": 2,
+            "lines_added": 177,
+            "lines_deleted": 0,
+            "files_touched": 6,
+            "tags": {
+              "DOC": 1,
+              "TEST": 1
+            }
+          },
+          {
+            "repo": "florenceegi/os3-matrix",
+            "date": "2026-06-16",
+            "commits": 1,
+            "lines_added": 30,
+            "lines_deleted": 1,
+            "files_touched": 1,
+            "tags": {
+              "DOC": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-19"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
+    },
     {
       "id": "M-267",
       "title": "Fix M-266: VITE_API_BASE_URL punta a host sslip morto — dashboard vuota su stat.florenceegi.com",
@@ -30,36 +139,41 @@
         "EGI-STAT"
       ],
       "stats": {
-        "total_commits": 1,
-        "lines_added": 30,
+        "total_commits": 2,
+        "lines_added": 124,
         "lines_deleted": 0,
-        "lines_net": 30,
-        "lines_touched": 30,
-        "files_touched": 1,
-        "weighted_commits": 1.5,
-        "cognitive_load": 1.8,
-        "productivity_index": 9.98,
+        "lines_net": 124,
+        "lines_touched": 124,
+        "files_touched": 4,
+        "weighted_commits": 2.3,
+        "cognitive_load": 2.26,
+        "productivity_index": 15.69,
         "tags_breakdown": {
+          "DOC": 1,
           "FIX": 1
         },
         "commit_hashes": [
+          "04effb5c3480b32edf194d8f1ab364167098e335",
           "f9c46a15d317d8889bb5319872d982507edc4db0"
         ],
         "by_repo_day": [
           {
             "repo": "AutobookNft/EGI-STAT",
             "date": "2026-06-11",
-            "commits": 1,
-            "lines_added": 30,
+            "commits": 2,
+            "lines_added": 124,
             "lines_deleted": 0,
-            "files_touched": 1,
+            "files_touched": 4,
             "tags": {
+              "DOC": 1,
               "FIX": 1
             }
           }
         ],
-        "calculated_at": "2026-06-11"
-      }
+        "calculated_at": "2026-06-19"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
     },
     {
       "id": "M-266",
@@ -103,23 +217,21 @@
         "EGI-STAT"
       ],
       "stats": {
-        "total_commits": 3,
-        "lines_added": 570,
+        "total_commits": 2,
+        "lines_added": 569,
         "lines_deleted": 6,
-        "lines_net": 564,
-        "lines_touched": 576,
-        "files_touched": 14,
-        "weighted_commits": 2.5,
-        "cognitive_load": 2.74,
-        "productivity_index": 29.69,
+        "lines_net": 563,
+        "lines_touched": 575,
+        "files_touched": 13,
+        "weighted_commits": 1.8,
+        "cognitive_load": 2.68,
+        "productivity_index": 27.7,
         "tags_breakdown": {
           "DOC": 1,
-          "FEAT": 1,
-          "CONFIG": 1
+          "FEAT": 1
         },
         "commit_hashes": [
           "49de4adf59a319a993483cf08861cbf525bdfae9",
-          "8c1ec9e7b13451be43e5a699c599d9ceab58843a",
           "a169a38266394c703141768c5ef6393db17ea1b0"
         ],
         "by_repo_day": [
@@ -134,21 +246,12 @@
               "DOC": 1,
               "FEAT": 1
             }
-          },
-          {
-            "repo": "florenceegi/EGI-DOC",
-            "date": "2026-06-11",
-            "commits": 1,
-            "lines_added": 1,
-            "lines_deleted": 0,
-            "files_touched": 1,
-            "tags": {
-              "CONFIG": 1
-            }
           }
         ],
-        "calculated_at": "2026-06-11"
-      }
+        "calculated_at": "2026-06-19"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
     },
     {
       "id": "M-252",
@@ -199,7 +302,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-11"
+        "calculated_at": "2026-06-19"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -250,7 +353,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-11"
+        "calculated_at": "2026-06-19"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -275,24 +378,23 @@
         "EGI-STAT"
       ],
       "stats": {
-        "total_commits": 6,
-        "lines_added": 675,
-        "lines_deleted": 89,
-        "lines_net": 586,
-        "lines_touched": 764,
-        "files_touched": 27,
-        "weighted_commits": 7.8,
-        "cognitive_load": 2.99,
-        "productivity_index": 45.74,
+        "total_commits": 5,
+        "lines_added": 631,
+        "lines_deleted": 88,
+        "lines_net": 543,
+        "lines_touched": 719,
+        "files_touched": 25,
+        "weighted_commits": 6.3,
+        "cognitive_load": 2.94,
+        "productivity_index": 39.92,
         "tags_breakdown": {
-          "FIX": 4,
+          "FIX": 3,
           "FEAT": 1,
           "DOC": 1
         },
         "commit_hashes": [
           "113a4cc596f50cc3e6c4bfc27b3dce6822a52222",
           "40215a5cea85b56db3de8ad51a51783aaf781e13",
-          "8128e907e8fd57dc1de8730f3fa73c0680e1add2",
           "9e80e8056838bd02f4ac2ddcd95a585c1f6761eb",
           "db81ed7dc1ec8b61b4ed909a241819f7ab792b53",
           "e0a84fb1c4ffbb5b804fedc67c81b986e01b5e90"
@@ -301,12 +403,12 @@
           {
             "repo": "AutobookNft/EGI-STAT",
             "date": "2026-06-08",
-            "commits": 3,
-            "lines_added": 113,
-            "lines_deleted": 13,
-            "files_touched": 4,
+            "commits": 2,
+            "lines_added": 69,
+            "lines_deleted": 12,
+            "files_touched": 2,
             "tags": {
-              "FIX": 3
+              "FIX": 2
             }
           },
           {
@@ -333,7 +435,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-11"
+        "calculated_at": "2026-06-19"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -358,24 +460,22 @@
         "EGI"
       ],
       "stats": {
-        "total_commits": 5,
-        "lines_added": 896,
+        "total_commits": 3,
+        "lines_added": 344,
         "lines_deleted": 178,
-        "lines_net": 718,
-        "lines_touched": 1074,
-        "files_touched": 19,
-        "weighted_commits": 5.4,
-        "cognitive_load": 2.96,
-        "productivity_index": 42.48,
+        "lines_net": 166,
+        "lines_touched": 522,
+        "files_touched": 15,
+        "weighted_commits": 3.8,
+        "cognitive_load": 2.74,
+        "productivity_index": 19.95,
         "tags_breakdown": {
           "FIX": 2,
-          "DOC": 3
+          "DOC": 1
         },
         "commit_hashes": [
           "09cc7e6a32badfc3013ecdbe3a24635112ea0f11",
           "5404aa8247f32617f0a3947618ce2652b85b8024",
-          "7e77a3279d099542e3a8f4016363739f40a9c04f",
-          "a1de0eb25e8464c51990c26b251b9d11ccf6fc6c",
           "f39fd3c291792387a2c5fa3df8d90d624d67ba82"
         ],
         "by_repo_day": [
@@ -411,20 +511,9 @@
             "tags": {
               "DOC": 1
             }
-          },
-          {
-            "repo": "florenceegi/EGI-DOC",
-            "date": "2026-06-11",
-            "commits": 2,
-            "lines_added": 552,
-            "lines_deleted": 0,
-            "files_touched": 4,
-            "tags": {
-              "DOC": 2
-            }
           }
         ],
-        "calculated_at": "2026-06-11"
+        "calculated_at": "2026-06-19"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -744,7 +833,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-11"
+        "calculated_at": "2026-06-19"
       },
       "organs": [
         "EGI-STAT"
@@ -787,25 +876,22 @@
       "report_tecnico": "missions/M-049_EGISTAT_NOISE_FILTER.md",
       "report_esteso": "missions/M-049_EGISTAT_NOISE_FILTER_FULL.md",
       "stats": {
-        "total_commits": 4,
-        "lines_added": 2434,
-        "lines_deleted": 3109,
-        "lines_net": -675,
-        "lines_touched": 5543,
-        "files_touched": 27,
-        "weighted_commits": 4.7,
-        "cognitive_load": 3.26,
-        "productivity_index": 45.65,
+        "total_commits": 2,
+        "lines_added": 639,
+        "lines_deleted": 13,
+        "lines_net": 626,
+        "lines_touched": 652,
+        "files_touched": 2,
+        "weighted_commits": 2.3,
+        "cognitive_load": 2.45,
+        "productivity_index": 45.49,
         "tags_breakdown": {
           "FIX": 1,
-          "DOC": 2,
-          "ARCH": 1
+          "DOC": 1
         },
         "commit_hashes": [
           "11de33f75783d98ab36f4b9e488fd1dce4a30d00",
-          "78b82bdead45e952f0adfafebd3db5463c2e8ea7",
-          "ce95fa8354db2c5d0381dff8f4a8bd07d7375425",
-          "f271d694600ae9bd1f133e07c49f714ac95946f9"
+          "ce95fa8354db2c5d0381dff8f4a8bd07d7375425"
         ],
         "by_repo_day": [
           {
@@ -822,27 +908,16 @@
           {
             "repo": "florenceegi/EGI-DOC",
             "date": "2026-04-12",
-            "commits": 2,
-            "lines_added": 2164,
-            "lines_deleted": 10,
-            "files_touched": 8,
-            "tags": {
-              "DOC": 2
-            }
-          },
-          {
-            "repo": "florenceegi/oracode",
-            "date": "2026-06-01",
             "commits": 1,
-            "lines_added": 238,
-            "lines_deleted": 3086,
-            "files_touched": 18,
+            "lines_added": 607,
+            "lines_deleted": 0,
+            "files_touched": 1,
             "tags": {
-              "ARCH": 1
+              "DOC": 1
             }
           }
         ],
-        "calculated_at": "2026-06-11"
+        "calculated_at": "2026-06-19"
       },
       "organs": [
         "EGI-DOC",
