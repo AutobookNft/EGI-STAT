@@ -14,6 +14,7 @@ ecosystem.py — Discovery multi-registry + normalizzazione missioni — M-220
 import os
 import sys
 import json
+from datetime import date
 from pathlib import Path
 
 # Root da spazzare. Poli vive in /tmp/oracode (fuori HOME). Tutti i repo contano
@@ -174,6 +175,63 @@ def _descriptors_from_projects_json():
     return out
 
 
+# ── D2 (M-OS3-107) — honor dello skip firmato, INVARIANTE FAIL-SAFE ────────────
+# Una stat si spegne SOLO con una decisione esplicita, firmata e (se a termine)
+# non scaduta. Ogni altro caso — blocco stats assente, malformato, skip
+# incompleto/non firmato, o scaduto — ricade su CONTATO. Il bug da impedire è lo
+# spegnimento SILENZIOSO di un organo: l'assenza non deve mai significare "non
+# contare". Honor UNICO consumato da entrambe le discovery (aggregatore di
+# produzione + ingestion) → nessun drift tra i due rami.
+def is_counted(descriptor, today=None):
+    """True se il repo del descrittore va CONTATO nelle statistiche.
+
+    @param descriptor  dict del .oracode/project.json (può non avere 'stats').
+    @param today        data ISO 'YYYY-MM-DD' iniettata (P0-3: nessun default
+                        nascosto in firma; None → date.today() reale a runtime).
+    """
+    if today is None:
+        today = date.today().isoformat()
+    stats = descriptor.get("stats")
+    if not isinstance(stats, dict):
+        return True                              # assenza/malformazione → CONTATO
+    if stats.get("counted", True) is not False:
+        return True                              # counted assente o true → CONTATO
+    # counted == False: richiede uno skip firmato e valido per spegnere
+    skip = stats.get("skip")
+    if not isinstance(skip, dict):
+        return True                              # skip mancante → CONTATO (fail-safe)
+    if not skip.get("approved_by") or not skip.get("mission"):
+        return True                              # non firmato → CONTATO (fail-safe)
+    scope = skip.get("scope")
+    if scope == "permanent":
+        return False
+    if scope == "until":
+        until = skip.get("until")
+        if not until:
+            return True                          # scope=until senza data → CONTATO
+        return not (str(until) >= str(today))    # scaduto (until<today) → AUTO-REVOCA a CONTATO
+    return True                                  # scope sconosciuto → CONTATO (fail-safe)
+
+
+def _skipped_registry_realpaths(today=None):
+    """Set di realpath(registry_path) dei descrittori con skip firmato e valido.
+
+    Solo i progetti engine-registered (projects.json) hanno un descrittore e
+    quindi possono essere skippati; i registry scoperti dal walk senza
+    descrittore restano per costruzione CONTATI (non c'è skip da onorare)."""
+    skipped = set()
+    for desc, _path in _descriptors_from_projects_json():
+        if is_counted(desc, today):
+            continue
+        try:
+            rp = json.loads(Path(_path).read_text()).get("registry_path")
+        except Exception:
+            rp = desc.get("registry_path")
+        if rp:
+            skipped.add(os.path.realpath(rp))
+    return skipped
+
+
 def _paths_from_walk():
     """Sweep filesystem con pruning: cattura i registry non engine-registered
     (fabiocherici, ORACODE-DOC, archive). os.walk pruned — glob ricorsivo
@@ -198,9 +256,10 @@ def discover_registries():
     per ENTRAMBI e logga un warning su stderr."""
     seen = set()
     by_organ = {}     # organ -> (realpath, missions)
+    skipped = _skipped_registry_realpaths()   # D2 (M-OS3-107) — skip firmato
     for p in _paths_from_projects_json() + _paths_from_walk():
         rp = os.path.realpath(p)
-        if rp in seen or not os.path.isfile(rp):
+        if rp in seen or not os.path.isfile(rp) or rp in skipped:
             continue
         seen.add(rp)
         try:

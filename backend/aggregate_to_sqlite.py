@@ -202,9 +202,10 @@ def discover_registries_from_index():
     """
     seen = set()
     out = []
+    skipped = ecosystem._skipped_registry_realpaths()   # D2 (M-OS3-107) — skip firmato
     for p in ecosystem._paths_from_projects_json():
         rp = os.path.realpath(p)
-        if rp in seen or not os.path.isfile(rp):
+        if rp in seen or not os.path.isfile(rp) or rp in skipped:
             continue
         seen.add(rp)
         out.append((rp, ecosystem.organ_of(rp)))
