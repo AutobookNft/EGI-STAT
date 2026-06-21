@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "created": "2026-06-07",
     "note": "Mission mono-organo migrate dal centrale EGI-DOC. ID storici preservati; nuove mission usano id_prefix.",
-    "updated": "2026-06-16"
+    "updated": "2026-06-21"
   },
   "missions": [
     {
@@ -506,12 +506,12 @@
       "id": "M-248",
       "title": "Fix strutturale stats EGI-STAT: chiave composita (organ,id) + mission_organs + regola delivered + filtro single-source",
       "trigger_matrix": 3,
-      "status": "auditing",
+      "status": "closed",
       "date_open": "2026-06-08",
       "date_close": "2026-06-08",
       "scope_hash": "fbd2cd51b4727bd25d40b203901f759b482631d3e30349602bae53ce3a2b4dbe",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-08T15:32:21.392Z",
+      "last_engine_sync": "2026-06-21T13:23:35.459Z",
       "organs": [
         "os3-matrix",
         "EGI-STAT"
@@ -568,23 +568,23 @@
       "id": "M-247",
       "title": "P0 root-cause stats EGI-STAT: auto-refresh serving (anti-staleness) + diagnosi observer-effect conteggio commit",
       "trigger_matrix": 3,
-      "status": "auditing",
+      "status": "closed",
       "date_open": "2026-06-08",
-      "date_close": null,
+      "date_close": "2026-06-08",
       "scope_hash": "214d280d103407c376c7d977af8393d5661be6e736d0eca3d71641e87bd759e7",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-08T15:13:20.197Z"
+      "last_engine_sync": "2026-06-21T13:23:35.355Z"
     },
     {
       "id": "M-246",
       "title": "Fix contrasto colonna Giorno tabella MissionsByDay (testo invisibile su sfondo)",
       "trigger_matrix": 1,
-      "status": "auditing",
+      "status": "closed",
       "date_open": "2026-06-08",
       "date_close": "2026-06-08",
       "scope_hash": "8ff3b8097bdb8672703285e5032de9862e86a868da2dce98cca9a628e7cacdff",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-08T14:27:23.384Z",
+      "last_engine_sync": "2026-06-21T13:23:35.262Z",
       "organs": [
         "EGI-STAT",
         "EGI-DOC",
@@ -654,12 +654,12 @@
       "id": "M-245",
       "title": "EGI-STAT: grafico giornaliero per mese + tabella mission giorno-per-organo (endpoint missions_by_day)",
       "trigger_matrix": 3,
-      "status": "auditing",
+      "status": "closed",
       "date_open": "2026-06-08",
       "date_close": "2026-06-08",
       "scope_hash": "5cff6856a57d7e9dc0367171a0b2e8c31c64b91093915acee8a7774f0c09a033",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-08T11:54:10.575Z",
+      "last_engine_sync": "2026-06-21T13:23:35.166Z",
       "organs": [
         "EGI-STAT",
         "EGI-DOC",
@@ -731,12 +731,12 @@
       "id": "M-244",
       "title": "Deploy PI v3 al serving: grafico Indice Produttivita usa throughput (no re-ingest, reversibile)",
       "trigger_matrix": 2,
-      "status": "auditing",
+      "status": "closed",
       "date_open": "2026-06-07",
       "date_close": "2026-06-07",
       "scope_hash": "a96ea6306a13eaa48a859e0203087dd280add680f79f655670445df08c75c5d3",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-07T18:14:54.788Z",
+      "last_engine_sync": "2026-06-21T13:23:35.068Z",
       "organs": [
         "EGI-STAT"
       ],
