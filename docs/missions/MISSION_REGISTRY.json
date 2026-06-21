@@ -263,10 +263,6 @@
       "scope_hash": "34701bc7b519042257ef49ad731f31028f4a3050f8b4717d782ea6e9143c36d3",
       "synced_by_engine": true,
       "last_engine_sync": "2026-06-08T22:49:02.339Z",
-      "report_tecnico": "docs/missions/M-252.md",
-      "report_esteso": "docs/missions/M-252_FULL.md",
-      "report_technical": "docs/missions/M-252.md",
-      "report_extended": "docs/missions/M-252_FULL.md",
       "organs": [
         "EGI-STAT"
       ],
@@ -317,10 +313,6 @@
       "scope_hash": "bbf63af5e6b96d4dcef73522cdb3b1b26465fa7040de94e85b9d09263eb8056f",
       "synced_by_engine": true,
       "last_engine_sync": "2026-06-08T21:45:23.429Z",
-      "report_tecnico": "docs/missions/M-251.md",
-      "report_esteso": "docs/missions/M-251_FULL.md",
-      "report_technical": "docs/missions/M-251.md",
-      "report_extended": "docs/missions/M-251_FULL.md",
       "organs": [
         "EGI-STAT"
       ],
@@ -368,10 +360,6 @@
       "scope_hash": "430c3b448ec04c971c079302df065e05b01d548362a99dc88e81f084d662a28e",
       "synced_by_engine": true,
       "last_engine_sync": "2026-06-08T21:24:02.579Z",
-      "report_tecnico": "docs/missions/M-250.md",
-      "report_esteso": "docs/missions/M-250_FULL.md",
-      "report_technical": "docs/missions/M-250.md",
-      "report_extended": "docs/missions/M-250_FULL.md",
       "organs": [
         "EGI-DOC",
         "EGI",
@@ -450,10 +438,6 @@
       "scope_hash": "7b6b104e137b1ac4af8a22a6015a9ac6392d609288762a20850eacbf6c219369",
       "synced_by_engine": true,
       "last_engine_sync": "2026-06-08T21:24:03.796Z",
-      "report_tecnico": "docs/missions/M-249.md",
-      "report_esteso": "docs/missions/M-249_FULL.md",
-      "report_technical": "docs/missions/M-249.md",
-      "report_extended": "docs/missions/M-249_FULL.md",
       "organs": [
         "EGI-STAT",
         "EGI-DOC",
@@ -800,10 +784,6 @@
       "scope_hash": "9f363cfd9735d8d3b315fbaa07e3a5b8fcdbfe4534a3f2ba811b9a27402e56b1",
       "synced_by_engine": true,
       "last_engine_sync": "2026-06-07T17:37:11.297Z",
-      "report_tecnico": "docs/missions/M-243.md",
-      "report_esteso": "docs/missions/M-243_FULL.md",
-      "report_technical": "docs/missions/M-243.md",
-      "report_extended": "docs/missions/M-243_FULL.md",
       "stats": {
         "total_commits": 1,
         "lines_added": 476,
@@ -811,7 +791,7 @@
         "lines_net": 476,
         "lines_touched": 476,
         "files_touched": 10,
-        "weighted_commits": 1.0,
+        "weighted_commits": 1,
         "cognitive_load": 2.54,
         "productivity_index": 22.65,
         "tags_breakdown": {
@@ -873,8 +853,6 @@
       "files_modified": [
         "EGI-STAT/backend/core/github_client.py"
       ],
-      "report_tecnico": "missions/M-049_EGISTAT_NOISE_FILTER.md",
-      "report_esteso": "missions/M-049_EGISTAT_NOISE_FILTER_FULL.md",
       "stats": {
         "total_commits": 2,
         "lines_added": 639,
