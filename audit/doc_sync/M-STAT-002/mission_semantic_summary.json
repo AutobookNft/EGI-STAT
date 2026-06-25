@@ -1,0 +1,23 @@
+{
+  "mission_id": "M-STAT-002",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "commit": "6af5ad45cca38eee2c8b6bba4674af8b4686f565",
+  "summary": "Aggiunto un producer drift.json (ship-with-push) per il cockpit Nexus, speculare al serving M-NEXUS-009.",
+  "new_functions": [
+    {"file": "backend/produce_drift.py", "symbol": "produce(out_path)", "purpose": "esegue ssot-index-check sul laptop e serializza l'esito in data/drift.json"}
+  ],
+  "new_files": [
+    {"path": "backend/produce_drift.py", "type": "created", "role": "producer drift.json"},
+    {"path": "backend/tests/m_stat_002_drift_producer_test.py", "type": "created", "role": "test P0-13 (3 casi)"}
+  ],
+  "modified_files": [
+    {"path": "deploy/push-stats-nexus.sh", "type": "modified", "change": "step 1c (genera drift.json) + step 2c (s3 cp) + pull SSM drift.json sul server"}
+  ],
+  "behavior_changes": [
+    "Il push stat ora spedisce 3 artefatti ship-with-push: stats.db (sempre), coverage.json (M-FUC-057), drift.json (M-STAT-002).",
+    "drift.json: campi has_drift/returncode/raw/generated_at; conservativo (check irraggiungibile -> has_drift True, REGOLA ZERO).",
+    "Il cockpit serve drift.json invece di eseguire il check live sul box (falso drift: path laptop assenti sul box)."
+  ],
+  "narrative_content_changes": [],
+  "concepts": ["drift SSOT", "ship-with-push", "ssot-index-check", "drift.json", "push-stats-nexus", "cockpit Nexus", "coverage.json"]
+}

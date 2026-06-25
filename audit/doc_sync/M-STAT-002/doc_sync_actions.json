@@ -1,0 +1,16 @@
+{
+  "mission_id": "M-STAT-002",
+  "actions": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "mode": "additive",
+      "status": "applied",
+      "ssot_content_hash_before": "4d55a5c790b365cdf892ac6fe655d68b478bdd55abbcf0d4a9dfe9fddf6951d2",
+      "ssot_content_hash_after": "28909f799a6b7926a699abb71a5faae23f5e6fe495589b433442b065f54c85a0",
+      "diff_path": "diffs/MULTI_REGISTRY.md.diff",
+      "justification": "ADDITIVE: il doc documenta gli artefatti ship-with-push del push stat (§M-FUC-057 elenca stats.db + coverage.json e gli step 1b/2b di push-stats-nexus.sh). drift.json e un NUOVO terzo artefatto che segue lo stesso pattern (step 1c/2c + pull SSM). Nessun contenuto esistente cambia significato (la sezione M-FUC-057 resta record storico legittimo: quando fu scritta si spediva solo coverage.json); si aggiunge una nuova sottosezione e si dichiara 'artefatti ship-with-push: ora 3'. Discriminazione: cercato testo che descriva drift.json/produce_drift.py -> non trovato -> additive.",
+      "resolution_method": "auto_additive",
+      "timestamp": "2026-06-25T19:47:08Z"
+    }
+  ]
+}

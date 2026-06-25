@@ -1,0 +1,30 @@
+diff --git a/backend/MULTI_REGISTRY.md b/backend/MULTI_REGISTRY.md
+index 4809952..c595970 100644
+--- a/backend/MULTI_REGISTRY.md
++++ b/backend/MULTI_REGISTRY.md
+@@ -247,6 +247,25 @@ campi-scheda (`trigger_matrix`, `design` + titolo) dal **medesimo SQLite** della
+ > (`nexus-cockpit`) / 3 index_pollution (TESTPROJ)**. Test P0-13 `tests/M-FUC-057/coverage-ship.test.sh` (in Fucina)
+ > GREEN 5/5. SSOT canonico: `os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md` §Copertura.
+ 
++### Drift SSOT — secondo artefatto ship-with-push (M-STAT-002, 2026-06-25, ADDITIVO)
++> Stesso vincolo topologico (REGOLA ZERO) della copertura: `ssot-index-check` confronta l'**indice** con i
++> `registry_path` coi **path reali `/home/fabio/...`** che esistono solo sul **laptop**. Un check live sul box
++> EC2 (dove manca `projects.json` e i path sono del laptop) darebbe **falso drift**. Quindi `drift.json` segue
++> lo **stesso pattern ship-with-push** di `coverage.json`: il check gira sul laptop e il file viaggia col push.
++>
++> **`backend/produce_drift.py`** (NUOVO) esegue `ssot-index-check`
++> (`ORACODE_SSOT_INDEX_CHECK_BIN`, default `/home/fabio/os3-matrix/bin/ssot-index-check`) e serializza l'esito in
++> `data/drift.json`. Campi: `has_drift` (bool — `returncode != 0`), `returncode`, `raw` (output del check),
++> `generated_at`. **Conservativo (REGOLA ZERO): check irraggiungibile → `returncode None` → `has_drift True`**
++> (mai falso-verde).
++>
++> **`deploy/push-stats-nexus.sh`** (MODIFICATO): allo step **1c** genera `drift.json` (accanto a `coverage.json`
++> dello step 1b) + step **2c** `s3 cp`; il **pull SSM** lo tira giù sul server accanto a `stats.db`/`coverage.json`.
++> **Best-effort, event-driven (open/close), NESSUN cron** — identico alla copertura. **Speculare al serving
++> M-NEXUS-009**: il cockpit **serve** `drift.json` invece di eseguire il check live sul box. Test P0-13
++> `tests/m_stat_002_drift_producer_test.py` 3/3. **Artefatti ship-with-push del push stat: ora 3** — `stats.db`
++> (sempre), `coverage.json` (M-FUC-057, best-effort), `drift.json` (M-STAT-002, best-effort).
++
+ ## Test
+ `tests/m_220_multiregistry_test.py` — oracle indipendente: rilegge i registry,
+ conta i completed per-organo, asserisce che il DB combaci (+ colonna/PK `organ`).

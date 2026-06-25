@@ -1,0 +1,14 @@
+{
+  "mission_id": "M-STAT-002",
+  "note": "EGI-STAT non ha docs/lso/SSOT_REGISTRY.json (LSO ridotto, no RAG). Identificazione SSOT eseguita per scoperta documentale: l'unico doc che documenta la pipeline stat/push e gli artefatti ship-with-push e backend/MULTI_REGISTRY.md (gia toccato da DOC-SYNC in M-266, M-221, M-STAT-001).",
+  "ssot_registry_present": false,
+  "verification_mode": "registry_only_no_registry_file",
+  "impacted": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "impact_type": "documental_match",
+      "reason": "Documenta deploy/push-stats-nexus.sh e gli artefatti ship-with-push (§M-FUC-057: stats.db + coverage.json). M-STAT-002 aggiunge drift.json come terzo artefatto allo stesso push: la lista degli artefatti spediti e impattata.",
+      "matched_mission_files": ["deploy/push-stats-nexus.sh", "backend/produce_drift.py"]
+    }
+  ]
+}

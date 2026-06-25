@@ -14,17 +14,64 @@
       "title": "Producer drift.json (ship-with-push): push-stats-nexus genera l'esito ssot-index-check sul laptop e lo spedisce al cockpit (gemello M-NEXUS-009)",
       "trigger_matrix": 2,
       "stats_counted": true,
-      "status": "executing",
+      "status": "closed",
       "date_open": "2026-06-25",
-      "date_close": null,
+      "date_close": "2026-06-25",
       "scope_hash": "098727405d188ff77878f148fcbbfe37e30fb65fa1a235f07469e676aa6fd451",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-25T19:39:42.826Z",
+      "last_engine_sync": "2026-06-25T19:49:38.047Z",
       "ssot_waiver": {
         "reason": "Producer infra ship-with-push: genera drift.json (esito ssot-index-check laptop) per il cockpit. Speculare a M-NEXUS-009; nessuna architettura SSOT toccata.",
         "at": "2026-06-25T19:39:42.768Z",
         "by": "supervisor"
-      }
+      },
+      "doc_sync_executed": true,
+      "doc_sync_log": {
+        "agent": "doc-sync-v2",
+        "tool_use_id": "toolu_012UGSw3r2FaMjeG8mBNmGEN",
+        "output_hash": "1ca62a3a9d3e9f79a1a212c6f2def93d0ee9a22034e96f75a4c09758f282a440",
+        "date": "2026-06-25T19:49:38.045Z",
+        "outcome": "success"
+      },
+      "organs": [
+        "EGI-DOC",
+        "egi-credential",
+        "EGI-STAT",
+        "dimostralo"
+      ],
+      "stats": {
+        "total_commits": 1,
+        "lines_added": 113,
+        "lines_deleted": 1,
+        "lines_net": 112,
+        "lines_touched": 114,
+        "files_touched": 3,
+        "weighted_commits": 1.5,
+        "cognitive_load": 2.14,
+        "productivity_index": 12.26,
+        "tags_breakdown": {
+          "FIX": 1
+        },
+        "commit_hashes": [
+          "6af5ad45cca38eee2c8b6bba4674af8b4686f565"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-25",
+            "commits": 1,
+            "lines_added": 113,
+            "lines_deleted": 1,
+            "files_touched": 3,
+            "tags": {
+              "FIX": 1
+            }
+          }
+        ],
+        "calculated_at": "2026-06-25"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
     },
     {
       "id": "M-STAT-001",
@@ -57,20 +104,22 @@
         "fabiocherici"
       ],
       "stats": {
-        "total_commits": 3,
-        "lines_added": 871,
-        "lines_deleted": 14,
-        "lines_net": 857,
-        "lines_touched": 885,
-        "files_touched": 14,
-        "weighted_commits": 4.7,
-        "cognitive_load": 2.81,
-        "productivity_index": 47.17,
+        "total_commits": 4,
+        "lines_added": 970,
+        "lines_deleted": 17,
+        "lines_net": 953,
+        "lines_touched": 987,
+        "files_touched": 17,
+        "weighted_commits": 5.5,
+        "cognitive_load": 2.9,
+        "productivity_index": 51.84,
         "tags_breakdown": {
+          "DOC": 1,
           "FIX": 1,
           "ARCH": 2
         },
         "commit_hashes": [
+          "0b94129b097ae713e90f352dc5e93bdb8089d669",
           "cfb088541e3b3525708f34a89917fdbe1ba808bd",
           "d09ca8503dabdda6565b66aaa63643625bd4c939",
           "fa4a76f5822a0cddea36a466b4eb1e83c77c6106"
@@ -79,11 +128,12 @@
           {
             "repo": "AutobookNft/EGI-STAT",
             "date": "2026-06-25",
-            "commits": 1,
-            "lines_added": 72,
-            "lines_deleted": 4,
-            "files_touched": 3,
+            "commits": 2,
+            "lines_added": 171,
+            "lines_deleted": 7,
+            "files_touched": 6,
             "tags": {
+              "DOC": 1,
               "FIX": 1
             }
           },
