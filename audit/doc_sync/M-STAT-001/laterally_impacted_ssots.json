@@ -1,0 +1,6 @@
+{
+  "mission_id": "M-STAT-001",
+  "rag_mode": "skipped_no_schema",
+  "reason": "Istanza LSO ridotta: nessun RAG_SCHEMA configurato nel CLAUDE.md ne in ORACODE_RAG_SCHEMA. Step 3 (discovery laterale via RAG) skippato, coerente con M-220/M-221/M-251.",
+  "impacted": []
+}

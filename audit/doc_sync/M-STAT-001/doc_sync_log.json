@@ -1,0 +1,41 @@
+{
+  "version": "2.2.0",
+  "doc_sync_version": "2.2.0",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "mission_id": "M-STAT-001",
+  "timestamp_start": "2026-06-25T18:00:00Z",
+  "timestamp_end": "2026-06-25T18:06:00Z",
+  "duration_seconds": 360,
+  "verification_mode": "registry_only",
+  "trigger_matrix_type": 2,
+  "ssots_impacted_direct": 2,
+  "ssots_impacted_lateral": 0,
+  "ssots_modified_additive": 1,
+  "ssots_modified_substitutive": 0,
+  "ssots_no_change": 0,
+  "ssots_proposed_external": 1,
+  "rag_chunks_reindexed": null,
+  "rag_mode": "skipped_no_schema",
+  "approvals_required": 0,
+  "approvals_received": 0,
+  "outcome": "success",
+  "failure_reason": null,
+  "steps_completed": ["step_1", "step_2", "step_4", "step_6"],
+  "steps_skipped": ["step_3_rag_discovery", "step_5_rag_reindex", "step_5b_registry_metadata"],
+  "steps_skipped_reason": "Istanza LSO ridotta: nessun docs/lso/SSOT_REGISTRY.json e nessun RAG_SCHEMA (coerente con M-220/M-221/M-251). Step 2 degradato a scansione manuale esaustiva (grep). Discovery laterale e re-indexing non disponibili; metadati registry non aggiornabili (registry assente).",
+  "ssot_details": [
+    {"path": "backend/MULTI_REGISTRY.md", "location": "in_instance", "mode": "additive", "status": "applied"},
+    {"path": "os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md", "location": "cross_organ_external", "mode": "additive", "status": "proposed_external"}
+  ],
+  "rewrite_flagged": [],
+  "uncovered_new_files": ["backend/tests/m_fuc_062_builder_test.py"],
+  "scope_excluded": ["os3-matrix (cross-organo, fuori instance_root; patch proposta non auto-applicata)"],
+  "operator_action_required": {
+    "type": "manual_ssot_patch",
+    "target": "/home/fabio/os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+    "mode": "additive",
+    "patch_file": "audit/doc_sync/M-STAT-001/diffs/STATS_SYSTEM_SSOT.proposed.md",
+    "summary": "Estendere l'elenco colonne di missions_open (§Mission IN CORSO) con trigger_matrix+design e inserire il blockquote di delta §Campi-scheda dettaglio (M-STAT-001)."
+  },
+  "audit_path": "audit/doc_sync/M-STAT-001/"
+}

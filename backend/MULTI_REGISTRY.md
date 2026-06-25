@@ -183,9 +183,9 @@ Test: `tests/m-266/test_public_site_stats.sh`.
 ## Mission IN CORSO — tabella `missions_open` + endpoint (M-FUC-054, 2026-06-16, ADDITIVO)
 Accanto alle mission **delivered** (tabella `missions`, asse produzione) il serving espone ora le mission
 **IN CORSO** (WIP) per il cockpit Nexus. `aggregate_to_sqlite.py` aggiunge una **tabella additiva**
-**`missions_open`** (`id, organ, title, raw_status, mission_type, date_opened, discovered_at`; PK
-`(organ, id)`; indici su `organ` e `raw_status`), popolata da un **Pass DEDICATO** (dopo Pass1/Pass2) che
-ri-scorre **gli stessi** registry via `insert_open_mission` → `ecosystem.normalize_open_mission`. Path
+**`missions_open`** (`id, organ, title, raw_status, mission_type, date_opened, trigger_matrix, design,
+discovered_at`; PK `(organ, id)`; indici su `organ` e `raw_status`), popolata da un **Pass DEDICATO** (dopo
+Pass1/Pass2) che ri-scorre **gli stessi** registry via `insert_open_mission` → `ecosystem.normalize_open_mission`. Path
 **completamente separato** da `insert_mission`/`normalize_mission`: NON scrive in `missions` né nelle sue
 child-table → **conteggi prod identici** (vincolo CEO). Nessuna chiamata git (O(mission)). In `DROP_TABLES`
 (full-rebuild ricostruisce anche questa). Meta: `missions_open_count`.
@@ -210,6 +210,20 @@ endpoint v2). **Confine** (Pilastro 3): è una vista aggiuntiva di lettura (miss
 mai sommata ai `weighted_commits`, fuori da `_CLOSED_WHERE` e dalla time-series. Test P0-13
 `tests/m_fuc_054_open_missions_test.py` **13/13 GREEN** (7 nuovi + 6 invariante m_248). SSOT canonico:
 `os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md` §Mission IN CORSO.
+
+### Campi-scheda dettaglio: `trigger_matrix` + `design` (M-STAT-001, 2026-06-25, ADDITIVO)
+Il builder esporta ora due colonne aggiuntive **in entrambe** le tabelle `missions` e `missions_open`:
+**`trigger_matrix`** (INTEGER, `1..6` dalla Trigger Matrix DOC-SYNC, o `NULL`) e **`design`** (TEXT,
+`'ok'|'waiver'|NULL`, governance del design gate). `ecosystem.normalize_mission`/`normalize_open_mission`
+le derivano dal registry: `trigger_matrix` passa-attraverso da `m['trigger_matrix']`; `design` mappa
+`design_fingerprint → 'ok'`, `design_waiver → 'waiver'`, altrimenti `None`. `aggregate_to_sqlite.py`
+(`insert_mission`/`insert_open_mission`) le scrive col medesimo upsert `ON CONFLICT(organ,id) DO UPDATE`.
+**Confine** (Pilastro 3, additivo): nuove colonne nullable, nessuna metrica di produzione tocca questi
+campi, conteggi e time-series invariati. **Speculare al serving M-NEXUS-008**: il cockpit serve i 3
+campi-scheda (`trigger_matrix`, `design` + titolo) dal **medesimo SQLite** della lista, non più da
+`bin/mission show` (che sul box leggeva file-registry stali coi path del laptop). Test:
+`tests/m_fuc_062_builder_test.py` **4/4**. SSOT canonico: `os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md`
+§Mission IN CORSO (patch additiva proposta, cross-organo — vedi audit `M-STAT-001`).
 
 ## Copertura di INSTRUMENTAZIONE dei repo — scanner ship-with-push (M-FUC-057, 2026-06-16, ADDITIVO)
 > Distinto dalla "Copertura repo nei grafici giornalieri" (M-222, sopra): qui si misura **quali repo git sono

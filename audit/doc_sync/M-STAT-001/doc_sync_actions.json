@@ -1,0 +1,29 @@
+{
+  "mission_id": "M-STAT-001",
+  "actions": [
+    {
+      "ssot_path": "backend/MULTI_REGISTRY.md",
+      "location": "in_instance",
+      "mode": "additive",
+      "status": "applied",
+      "ssot_content_hash_before": "307e9f3e89f16370603d6d9d7aaf5e2ac74ca5efb3426208b3cf8994e260c4b9",
+      "ssot_content_hash_after": "4d55a5c790b365cdf892ac6fe655d68b478bdd55abbcf0d4a9dfe9fddf6951d2",
+      "diff_path": "diffs/MULTI_REGISTRY.md.diff",
+      "justification": "Concetto (colonne trigger_matrix+design su missions/missions_open) NON presente nel doc → ADDITIVE. Esteso l'elenco colonne di missions_open (riga 186) + aggiunto blockquote di delta datato §Campi-scheda dettaglio. Esaustivita M-OS3-027 verificata via grep: unica occorrenza dell'elenco-colonne aggiornata; riga 194 (return dict criterio WIP) lasciata invariata di proposito (descrive il criterio di partizione delivered/open, non lo schema-colonne; i nuovi campi non partecipano al criterio).",
+      "resolution_method": "auto_applied",
+      "timestamp": "2026-06-25"
+    },
+    {
+      "ssot_path": "os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "location": "cross_organ_external",
+      "mode": "additive",
+      "status": "proposed_external",
+      "ssot_content_hash_at_proposal": "00df94283e16a98ab529d71b190903478ca300f50aa635796716b4241765fbc3",
+      "diff_path": "diffs/STATS_SYSTEM_SSOT.proposed.md",
+      "justification": "SSOT canonico cross-ecosistema FUORI instance_root EGI-STAT. Regole assolute 6 (lavora solo sui file della mission) + 9 (universalita / no cross-organ auto-edit) → patch additiva PROPOSTA non auto-applicata. Stesso pattern di M-251 (proposed_external). Da applicare via DOC-SYNC dell'organo os3-matrix o manualmente dal CEO.",
+      "resolution_method": "proposed_for_operator",
+      "operator_action_required": true,
+      "timestamp": "2026-06-25"
+    }
+  ]
+}

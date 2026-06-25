@@ -1,0 +1,26 @@
+{
+  "mission_id": "M-STAT-001",
+  "instance_root": "/home/fabio/EGI-STAT",
+  "commit": "d09ca8503dabdda6565b66aaa63643625bd4c939",
+  "trigger_matrix_type": 2,
+  "trigger_matrix_reason": "Cambia lo schema delle tabelle SQLite servite (nuove colonne) e l'output di normalize_mission/normalize_open_mission; output/behavior visibile cambiato → tipo 2 (comportamentale). Non tipo 3: nessun nuovo endpoint/model/service, solo colonne additive in tabelle esistenti.",
+  "files_modified": [
+    {"path": "backend/ecosystem.py", "type": "modified"},
+    {"path": "backend/aggregate_to_sqlite.py", "type": "modified"},
+    {"path": "backend/tests/m_fuc_062_builder_test.py", "type": "created"}
+  ],
+  "behaviors_modified": [
+    "ecosystem.normalize_mission ora include trigger_matrix (pass-through da m['trigger_matrix']) e design ('ok' se design_fingerprint, 'waiver' se design_waiver, altrimenti None)",
+    "ecosystem.normalize_open_mission ora include gli stessi due campi, stessa semantica",
+    "aggregate_to_sqlite SCHEMA: tabella missions estesa con trigger_matrix INTEGER + design TEXT",
+    "aggregate_to_sqlite SCHEMA: tabella missions_open estesa con trigger_matrix INTEGER + design TEXT",
+    "insert_mission/insert_open_mission: INSERT + upsert ON CONFLICT scrivono le 2 nuove colonne"
+  ],
+  "new_functions": [],
+  "removed_functions": [],
+  "narrative_changes": [],
+  "key_concepts": ["trigger_matrix", "design gate", "scheda dettaglio cockpit", "missions table schema", "missions_open table schema", "normalize_mission", "aggregate_to_sqlite", "stats.db builder", "M-NEXUS-008 serving speculare"],
+  "additive": true,
+  "production_metrics_impacted": false,
+  "notes": "Modifica speculare al serving M-NEXUS-008. Colonne nullable, conteggi di produzione invariati (vincolo CEO M-FUC-054 preservato)."
+}

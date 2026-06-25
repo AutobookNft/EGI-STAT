@@ -14,17 +14,78 @@
       "title": "Builder stats.db: esporta trigger_matrix + design (scheda dettaglio mission cockpit M-FUC-062) nelle tabelle missions/missions_open",
       "trigger_matrix": 2,
       "stats_counted": true,
-      "status": "executing",
+      "status": "closed",
       "date_open": "2026-06-25",
-      "date_close": null,
+      "date_close": "2026-06-25",
       "scope_hash": "4c26e010fd70e4e515d0d10838dc187a9d6662fba5ecf22b1b7b419dc18ff7b3",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-25T17:45:36.592Z",
+      "last_engine_sync": "2026-06-25T17:54:23.974Z",
       "ssot_waiver": {
         "reason": "Builder additivo: 2 colonne (trigger_matrix/design) lette dal registry verso stats.db. Nessuna architettura SSOT toccata; speculare al fix nexus-cockpit M-NEXUS-008.",
         "at": "2026-06-25T17:45:36.535Z",
         "by": "supervisor"
-      }
+      },
+      "doc_sync_executed": true,
+      "doc_sync_log": {
+        "agent": "doc-sync-v2",
+        "tool_use_id": "toolu_015dL737TXPWrQtpu7zJekp2",
+        "output_hash": "32e61ec75daed3ee0017c0a0afc3efde7d9894f438672e346c4ed274a9990830",
+        "date": "2026-06-25T17:54:23.969Z",
+        "outcome": "success"
+      },
+      "organs": [
+        "os3-matrix",
+        "EGI-DOC",
+        "EGI-STAT",
+        "fabiocherici"
+      ],
+      "stats": {
+        "total_commits": 3,
+        "lines_added": 871,
+        "lines_deleted": 14,
+        "lines_net": 857,
+        "lines_touched": 885,
+        "files_touched": 14,
+        "weighted_commits": 4.7,
+        "cognitive_load": 2.81,
+        "productivity_index": 47.17,
+        "tags_breakdown": {
+          "FIX": 1,
+          "ARCH": 2
+        },
+        "commit_hashes": [
+          "cfb088541e3b3525708f34a89917fdbe1ba808bd",
+          "d09ca8503dabdda6565b66aaa63643625bd4c939",
+          "fa4a76f5822a0cddea36a466b4eb1e83c77c6106"
+        ],
+        "by_repo_day": [
+          {
+            "repo": "AutobookNft/EGI-STAT",
+            "date": "2026-06-25",
+            "commits": 1,
+            "lines_added": 72,
+            "lines_deleted": 4,
+            "files_touched": 3,
+            "tags": {
+              "FIX": 1
+            }
+          },
+          {
+            "repo": "florenceegi/fabiocherici",
+            "date": "2026-05-26",
+            "commits": 2,
+            "lines_added": 799,
+            "lines_deleted": 10,
+            "files_touched": 11,
+            "tags": {
+              "ARCH": 2
+            }
+          }
+        ],
+        "calculated_at": "2026-06-25"
+      },
+      "retrospective_executed": false,
+      "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
     },
     {
       "id": "M-FUC-057",
@@ -130,7 +191,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -187,7 +248,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -265,7 +326,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -315,7 +376,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -362,7 +423,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -440,7 +501,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -514,7 +575,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -576,7 +637,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -590,7 +651,22 @@
       "date_close": "2026-06-08",
       "scope_hash": "214d280d103407c376c7d977af8393d5661be6e736d0eca3d71641e87bd759e7",
       "synced_by_engine": true,
-      "last_engine_sync": "2026-06-21T13:23:35.355Z"
+      "last_engine_sync": "2026-06-21T13:23:35.355Z",
+      "stats": {
+        "total_commits": 0,
+        "lines_added": 0,
+        "lines_deleted": 0,
+        "lines_net": 0,
+        "lines_touched": 0,
+        "files_touched": 0,
+        "weighted_commits": 0,
+        "cognitive_load": 1,
+        "productivity_index": 0,
+        "tags_breakdown": {},
+        "by_repo_day": [],
+        "commit_hashes": [],
+        "calculated_at": "2026-06-25"
+      }
     },
     {
       "id": "M-246",
@@ -662,7 +738,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -683,24 +759,23 @@
         "EGI"
       ],
       "stats": {
-        "total_commits": 5,
-        "lines_added": 729,
-        "lines_deleted": 29,
-        "lines_net": 700,
-        "lines_touched": 758,
-        "files_touched": 24,
-        "weighted_commits": 6.3,
-        "cognitive_load": 2.94,
-        "productivity_index": 45.23,
+        "total_commits": 4,
+        "lines_added": 650,
+        "lines_deleted": 26,
+        "lines_net": 624,
+        "lines_touched": 676,
+        "files_touched": 21,
+        "weighted_commits": 4.8,
+        "cognitive_load": 2.87,
+        "productivity_index": 38.47,
         "tags_breakdown": {
           "FEAT": 1,
-          "FIX": 3,
+          "FIX": 2,
           "DOC": 1
         },
         "commit_hashes": [
           "516a1efa08f875fbc213be0990a56b53da9d9ff0",
           "64e19876346abe45e68c8081f56461790c6fcd46",
-          "bdfd52db8595c5af1e1c896563ec2a863bc06025",
           "e35e05fb51f0a56886f41fed295e8876c0fea121",
           "fbd858a4a00df20974e45d10a15d0af001a43356"
         ],
@@ -719,12 +794,12 @@
           {
             "repo": "florenceegi/EGI",
             "date": "2026-06-08",
-            "commits": 3,
-            "lines_added": 221,
-            "lines_deleted": 20,
-            "files_touched": 13,
+            "commits": 2,
+            "lines_added": 142,
+            "lines_deleted": 17,
+            "files_touched": 10,
             "tags": {
-              "FIX": 3
+              "FIX": 2
             }
           },
           {
@@ -739,7 +814,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-08"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -786,7 +861,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-07"
+        "calculated_at": "2026-06-25"
       },
       "retrospective_executed": false,
       "retrospective_skipped_reason": "deps assenti (read_log/bootstrap_index) — instance laboratorio senza read tracking"
@@ -830,7 +905,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "organs": [
         "EGI-STAT"
@@ -912,7 +987,7 @@
             }
           }
         ],
-        "calculated_at": "2026-06-19"
+        "calculated_at": "2026-06-25"
       },
       "organs": [
         "EGI-DOC",

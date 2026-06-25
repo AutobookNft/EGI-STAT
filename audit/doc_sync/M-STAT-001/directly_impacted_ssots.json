@@ -1,0 +1,20 @@
+{
+  "mission_id": "M-STAT-001",
+  "note": "Istanza LSO ridotta: nessun docs/lso/SSOT_REGISTRY.json. Step 2 deterministico degradato a scansione manuale esaustiva (grep) dei doc-SSOT che descrivono lo schema delle tabelle missions/missions_open o la pipeline aggregate, coerente con M-220/M-221/M-251.",
+  "impacted": [
+    {
+      "path": "backend/MULTI_REGISTRY.md",
+      "location": "in_instance",
+      "impact_type": "schema_doc_match",
+      "matched_section": "§Mission IN CORSO — tabella missions_open (riga 183-212)",
+      "reason": "Documenta l'elenco colonne della tabella missions_open che il diff estende; doc di architettura del backend EGI-STAT toccato dalla mission."
+    },
+    {
+      "path": "os3-matrix/docs/stats/STATS_SYSTEM_SSOT.md",
+      "location": "cross_organ_external",
+      "impact_type": "schema_doc_match",
+      "matched_section": "§Schema del dato (riga 599-602) + §Mission IN CORSO tabella missions_open (riga 604-640)",
+      "reason": "SSOT canonico cross-ecosistema dello stats system; documenta lo schema di entrambe le tabelle. FUORI instance_root → patch proposta, non auto-applicata (Regole assolute 6/9, pattern M-251)."
+    }
+  ]
+}
