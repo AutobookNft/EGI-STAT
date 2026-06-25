@@ -111,12 +111,17 @@ def normalize_open_mission(m):
         return None
     if _is_delivered(m):
         return None  # delivered → vive in `missions`, MAI in missions_open
+    # M-FUC-062: campi-scheda noti già a mission aperta (trigger fissato all'open;
+    # design valorizzato dal gate executing). Stessa semantica di normalize_mission.
+    design = "ok" if m.get("design_fingerprint") else ("waiver" if m.get("design_waiver") else None)
     return {
         "id": mid,
         "title": m.get("titolo") or m.get("title") or mid,
         "raw_status": status,
         "date_opened": m.get("data_apertura") or m.get("date_open"),
         "mission_type": m.get("tipo_missione") or m.get("type") or "feature",
+        "trigger_matrix": m.get("trigger_matrix"),
+        "design": design,
     }
 
 
@@ -324,6 +329,10 @@ def normalize_mission(m):
 
     title = m.get("titolo") or m.get("title") or mid
     stats = m.get("stats") or {}
+    # M-FUC-062: campi-scheda serviti al cockpit dal DB (non più da `bin/mission show`,
+    # che sul box leggeva file-registry stali coi path del laptop). `design` rispecchia
+    # la governance dell'engine (design_fingerprint → 'ok', design_waiver → 'waiver').
+    design = "ok" if m.get("design_fingerprint") else ("waiver" if m.get("design_waiver") else None)
     return {
         "id": mid,
         "title": title,
@@ -335,6 +344,8 @@ def normalize_mission(m):
         "cross_organ": bool(m.get("cross_organo") or m.get("cross_organ") or False),
         "files_modified": m.get("files_modified") or [],
         "doc_sync_executed": bool(m.get("doc_sync_executed", False)),
+        "trigger_matrix": m.get("trigger_matrix"),
+        "design": design,
         # stats: ricche solo per i registry già enrichati (EGI-DOC). Altrove 0
         # finché non gira l'enrich per-organo (follow-up M-220 fase 2).
         "stats": stats,

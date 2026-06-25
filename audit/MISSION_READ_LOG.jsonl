@@ -46,3 +46,14 @@
 {"ts":"2026-06-11T19:57:25Z","tool":"Edit","path":"EGI-STAT/CLAUDE.md","action":"read+write","mission":"M-266"}
 {"ts":"2026-06-11T19:58:32Z","tool":"Write","path":"EGI-STAT/docs/missions/M-266_STAT_SUBDOMAIN_REPORT_TECHNICAL.md","action":"write","mission":"M-266"}
 {"ts":"2026-06-11T19:58:46Z","tool":"Write","path":"EGI-STAT/docs/missions/M-266_STAT_SUBDOMAIN_REPORT_EXTENDED.md","action":"write","mission":"M-266"}
+{"ts":"2026-06-11T20:17:54Z","tool":"Bash","cmd":"cat /home/fabio/EGI-STAT/frontend/.env.production\n","paths":["EGI-STAT/frontend/.env.production"],"action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:18:03Z","tool":"Write","path":"EGI-STAT/frontend/.env.production","action":"write","mission":"M-267"}
+{"ts":"2026-06-11T20:18:26Z","tool":"Bash","cmd":"cd /home/fabio/EGI-STAT/frontend && npm run build 2>&1 | tail -3 && cd .. && tests/m-267/test_frontend_api_base.sh\n","paths":["&&"],"action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:18:46Z","tool":"Bash","cmd":"git add frontend/.env.production tests/m-267/ docs/missions/MISSION_REGISTRY.json && git commit -m \"$(cat <<'EOF'\n[FIX] M-267 — VITE_API_BASE_URL: host sslip morto → stat.florenceegi.com\n\nDashboar\n","paths":["&&"],"action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:31:26Z","tool":"Bash","cmd":"CREDS=\"egistat:$(head -1 /tmp/levespe-demo-pass.txt 2>/dev/null)\"; CREDS=\"egistat:$(head -1 /tmp/egistat-pass.txt)\"\necho \"--- bundle live:\"\ncurl -s -u \"$CREDS\" https://stat.florenceegi.com/ | grep -o \n","paths":["'assets/index-[^\"]*\\.js"],"action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:32:03Z","tool":"Read","path":"EGI-STAT/deploy/pull-frontend.sh","action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:32:13Z","tool":"Read","path":"EGI-STAT/deploy/deploy-stat.sh","action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:32:15Z","tool":"Bash","cmd":"grep -rniE \"password|secret|api[_-]?key|token|AKIA|BEGIN (RSA|OPENSSH)\" /home/fabio/EGI-STAT/deploy/pull-frontend.sh /home/fabio/EGI-STAT/tests/m-267/ /home/fabio/EGI-STAT/frontend/.env.production || \n","paths":["EGI-STAT/deploy/","EGI-STAT/deploy/pull-frontend.sh"],"action":"read","mission":"M-267"}
+{"ts":"2026-06-11T20:33:22Z","tool":"Write","path":"EGI-STAT/docs/missions/M-267_FIX_API_BASE_REPORT_TECHNICAL.md","action":"write","mission":"M-267"}
+{"ts":"2026-06-11T20:33:29Z","tool":"Write","path":"EGI-STAT/docs/missions/M-267_FIX_API_BASE_REPORT_EXTENDED.md","action":"write","mission":"M-267"}
+{"ts":"2026-06-25T17:45:36Z","tool":"Bash","cmd":"/home/fabio/os3-matrix/bin/mission focus M-STAT-001 2>&1 | tail -1; /home/fabio/os3-matrix/bin/mission advance --to=planned --mission=M-STAT-001 2>&1 | tail -1; /home/fabio/os3-matrix/bin/mission adva\n","paths":null,"action":"no_fs","mission":"M-STAT-001"}

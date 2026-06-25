@@ -6,9 +6,26 @@
     "version": "1.0.0",
     "created": "2026-06-07",
     "note": "Mission mono-organo migrate dal centrale EGI-DOC. ID storici preservati; nuove mission usano id_prefix.",
-    "updated": "2026-06-21"
+    "updated": "2026-06-25"
   },
   "missions": [
+    {
+      "id": "M-STAT-001",
+      "title": "Builder stats.db: esporta trigger_matrix + design (scheda dettaglio mission cockpit M-FUC-062) nelle tabelle missions/missions_open",
+      "trigger_matrix": 2,
+      "stats_counted": true,
+      "status": "executing",
+      "date_open": "2026-06-25",
+      "date_close": null,
+      "scope_hash": "4c26e010fd70e4e515d0d10838dc187a9d6662fba5ecf22b1b7b419dc18ff7b3",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-25T17:45:36.592Z",
+      "ssot_waiver": {
+        "reason": "Builder additivo: 2 colonne (trigger_matrix/design) lette dal registry verso stats.db. Nessuna architettura SSOT toccata; speculare al fix nexus-cockpit M-NEXUS-008.",
+        "at": "2026-06-25T17:45:36.535Z",
+        "by": "supervisor"
+      }
+    },
     {
       "id": "M-FUC-057",
       "title": "Vista Copertura repo on-demand nel cockpit: mappa i repo git senza .oracode/project.json (non instrumentati, fuori dalle stat) + descrittori non in projects.json",

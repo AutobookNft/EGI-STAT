@@ -59,6 +59,8 @@ SCHEMA = [
         files_touched        INTEGER NOT NULL DEFAULT 0,
         cognitive_load       REAL    NOT NULL DEFAULT 0,
         productivity_index   REAL    NOT NULL DEFAULT 0,
+        trigger_matrix       INTEGER,                    -- M-FUC-062: scheda dettaglio (1..6) o NULL
+        design               TEXT,                       -- M-FUC-062: 'ok'|'waiver'|NULL (governance design gate)
         calculated_at        TEXT,                       -- stats.calculated_at se presente
         registry_path        TEXT NOT NULL,              -- realpath del registry sorgente
         PRIMARY KEY (organ, id)                          -- H1 (M-248): chiave composita anti-collisione
@@ -154,6 +156,8 @@ SCHEMA = [
         raw_status    TEXT NOT NULL,              -- status grezzo (draft|planned|executing|auditing|auditing_failed)
         mission_type  TEXT,
         date_opened   TEXT,
+        trigger_matrix INTEGER,                    -- M-FUC-062: scheda dettaglio (1..6) o NULL
+        design        TEXT,                        -- M-FUC-062: 'ok'|'waiver'|NULL
         discovered_at TEXT,                        -- timestamp UTC di scoperta (audit, non conteggio)
         PRIMARY KEY (organ, id)
     )""",
@@ -250,8 +254,8 @@ def insert_mission(conn, organ, registry_path, nm):
             cross_organ, files_modified, doc_sync_executed, has_git_stats,
             total_commits, weighted_commits, lines_added, lines_deleted,
             lines_net, lines_touched, files_touched, cognitive_load,
-            productivity_index, calculated_at, registry_path
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            productivity_index, trigger_matrix, design, calculated_at, registry_path
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(organ,id) DO UPDATE SET
             title=excluded.title, status=excluded.status,
             mission_type=excluded.mission_type, date_opened=excluded.date_opened,
@@ -264,6 +268,7 @@ def insert_mission(conn, organ, registry_path, nm):
             lines_touched=excluded.lines_touched, files_touched=excluded.files_touched,
             cognitive_load=excluded.cognitive_load,
             productivity_index=excluded.productivity_index,
+            trigger_matrix=excluded.trigger_matrix, design=excluded.design,
             calculated_at=excluded.calculated_at, registry_path=excluded.registry_path""",
         (
             mid,
@@ -286,6 +291,8 @@ def insert_mission(conn, organ, registry_path, nm):
             _int(s.get("files_touched")),
             _real(s.get("cognitive_load")),
             _real(s.get("productivity_index")),
+            nm.get("trigger_matrix"),
+            nm.get("design"),
             s.get("calculated_at"),
             registry_path,
         ),
@@ -357,15 +364,18 @@ def insert_open_mission(conn, organ, registry_path, raw_mission):
     organ = ecosystem.canonical_of(organ)
     conn.execute(
         """INSERT INTO missions_open (
-            id, organ, title, raw_status, mission_type, date_opened, discovered_at
-        ) VALUES (?,?,?,?,?,?,?)
+            id, organ, title, raw_status, mission_type, date_opened,
+            trigger_matrix, design, discovered_at
+        ) VALUES (?,?,?,?,?,?,?,?,?)
         ON CONFLICT(organ,id) DO UPDATE SET
             title=excluded.title, raw_status=excluded.raw_status,
             mission_type=excluded.mission_type, date_opened=excluded.date_opened,
+            trigger_matrix=excluded.trigger_matrix, design=excluded.design,
             discovered_at=excluded.discovered_at""",
         (
             nm["id"], organ, nm.get("title"), nm["raw_status"],
             nm.get("mission_type"), nm.get("date_opened"),
+            nm.get("trigger_matrix"), nm.get("design"),
             datetime.now(timezone.utc).isoformat(),
         ),
     )
