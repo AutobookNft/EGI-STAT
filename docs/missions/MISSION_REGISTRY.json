@@ -10,6 +10,23 @@
   },
   "missions": [
     {
+      "id": "M-STAT-002",
+      "title": "Producer drift.json (ship-with-push): push-stats-nexus genera l'esito ssot-index-check sul laptop e lo spedisce al cockpit (gemello M-NEXUS-009)",
+      "trigger_matrix": 2,
+      "stats_counted": true,
+      "status": "executing",
+      "date_open": "2026-06-25",
+      "date_close": null,
+      "scope_hash": "098727405d188ff77878f148fcbbfe37e30fb65fa1a235f07469e676aa6fd451",
+      "synced_by_engine": true,
+      "last_engine_sync": "2026-06-25T19:39:42.826Z",
+      "ssot_waiver": {
+        "reason": "Producer infra ship-with-push: genera drift.json (esito ssot-index-check laptop) per il cockpit. Speculare a M-NEXUS-009; nessuna architettura SSOT toccata.",
+        "at": "2026-06-25T19:39:42.768Z",
+        "by": "supervisor"
+      }
+    },
+    {
       "id": "M-STAT-001",
       "title": "Builder stats.db: esporta trigger_matrix + design (scheda dettaglio mission cockpit M-FUC-062) nelle tabelle missions/missions_open",
       "trigger_matrix": 2,

@@ -22,6 +22,11 @@ ROOT="/home/fabio/EGI-STAT"
 # produce coverage.json — la scansione lato server sarebbe falsa (repo laptop-only assenti).
 ( cd "$ROOT/backend" && python3 coverage_scan.py >/dev/null 2>&1 ) || echo "[push-nexus] coverage WARN" >&2
 
+# 1c) DRIFT SSOT (M-STAT-002, ship-with-push): esegue ssot-index-check SUL LAPTOP (indice +
+# registry_path coi path reali /home/fabio/...) e produce drift.json. Un check live sul box
+# sarebbe falso (là manca projects.json e i path sono del laptop) — vedi gemello M-NEXUS-009.
+( cd "$ROOT/backend" && python3 produce_drift.py >/dev/null 2>&1 ) || echo "[push-nexus] drift WARN" >&2
+
 # 2) pubblica stats.db su S3 (laptop -> bucket; egi-hub-deploy/fabiocherici-deploy ha PutObject)
 aws s3 cp "$ROOT/backend/data/stats.db" "s3://${BUCKET}/stats.db" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
   || { echo "[push-nexus] s3 cp FALLITO (profilo $PROFILE)" >&2; exit 0; }
@@ -30,11 +35,15 @@ aws s3 cp "$ROOT/backend/data/stats.db" "s3://${BUCKET}/stats.db" --region "$REG
 [ -f "$ROOT/backend/data/coverage.json" ] && aws s3 cp "$ROOT/backend/data/coverage.json" "s3://${BUCKET}/coverage.json" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
   || echo "[push-nexus] coverage s3 cp WARN" >&2
 
+# 2c) pubblica drift.json su S3 (best-effort: il drift non blocca lo stat)
+[ -f "$ROOT/backend/data/drift.json" ] && aws s3 cp "$ROOT/backend/data/drift.json" "s3://${BUCKET}/drift.json" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
+  || echo "[push-nexus] drift s3 cp WARN" >&2
+
 # 3) consegna al dev-server (EVENT-DRIVEN, no cron): l'EC2 tira giu via SSM (il suo ruolo ha GetObject)
 aws ssm send-command --profile "$PROFILE" --region "$REGION" --instance-ids "$INSTANCE" \
   --document-name "AWS-RunShellScript" \
   --comment "nexus stats push (mission close)" \
-  --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\",\"aws s3 cp s3://${BUCKET}/coverage.json ${DEST}/backend/data/coverage.json --region ${REGION} || true\"]" \
+  --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\",\"aws s3 cp s3://${BUCKET}/coverage.json ${DEST}/backend/data/coverage.json --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/drift.json ${DEST}/backend/data/drift.json --region ${REGION} || true\"]" \
   --query 'Command.CommandId' --output text 2>/dev/null \
   || echo "[push-nexus] ssm send-command FALLITO (verifica perms ssm:SendCommand su $INSTANCE per $PROFILE)" >&2
 # 4) ATTUATORE vault Obsidian (M-OS3-109): auto-sync del "secondo cervello" a ogni ciclo mission.
