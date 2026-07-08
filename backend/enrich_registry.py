@@ -49,8 +49,34 @@ ALWAYS_SKIP = re.compile(
 )
 
 
-def classify_file(fname):
-    """Return 'code', 'doc', or None (skip)."""
+def _shebang_is_code(fname, repo_dir, commit):
+    """File senza estensione: legge il blob AL commit dato e torna True se la
+    prima riga è uno shebang (#!). Legge il blob STORICO via `git cat-file blob
+    <commit>:<path>` — mai il working tree: il file può essere stato cancellato o
+    rinominato dopo quel commit. Qualsiasi errore (blob assente, git ko, timeout)
+    è inghiottito → non-codice (False), mai propagato (Sicurezza Proattiva)."""
+    if not repo_dir or not commit:
+        return False
+    try:
+        result = subprocess.run(
+            ["git", "-C", repo_dir, "cat-file", "blob", f"{commit}:{fname}"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except Exception:
+        return False
+    if result.returncode != 0:
+        return False
+    return result.stdout.split("\n", 1)[0].startswith("#!")
+
+
+def classify_file(fname, repo_dir=None, commit=None):
+    """Return 'code', 'doc', or None (skip).
+
+    Gli eseguibili SENZA estensione (bin/mission, bin/deploy-hooks, ...) portano
+    uno shebang, non un'estensione: la whitelist da sola li scartava. Quando
+    repo_dir+commit sono disponibili, il ramo extension-less guarda la prima riga
+    del blob storico — uno shebang → "code". Senza repo_dir/commit il ramo resta
+    None (comportamento precedente, nessun crash sui call site che non li hanno)."""
     if ALWAYS_SKIP.search(fname):
         return None
     lower = fname.lower()
@@ -61,6 +87,8 @@ def classify_file(fname):
         return "code"
     if ext in DOC_EXT:
         return "doc"
+    if ext == "" and _shebang_is_code(fname, repo_dir, commit):
+        return "code"
     return None
 
 # organ_key → (local_dir, github_repo_name used in daily_stats.repo_name)
@@ -172,7 +200,7 @@ def _collect_repo_stats(repo_dir, github_name, mission_id):
         parts = line.split("\t")
         if len(parts) >= 3 and current_hash and current_date:
             fname = parts[2]
-            if classify_file(fname) is None:
+            if classify_file(fname, repo_dir, current_hash) is None:
                 continue
             added = int(parts[0]) if parts[0].isdigit() else 0
             deleted = int(parts[1]) if parts[1].isdigit() else 0
