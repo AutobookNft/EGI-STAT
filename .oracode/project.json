@@ -22,5 +22,11 @@
       "docs/missions/MISSION_REGISTRY.json"
     ],
     "_meta": "M-FUC-021 (pattern M-FUC-020 Fucina) gate SSOT-first: mission trigger 3 richiede lettura SSOT prima di executing (kill-switch: enabled=false). Globs verificati con ls sull'organo."
-  }
+  },
+  "stats_refresh_cmd": [
+    "bash",
+    "/home/fabio/EGI-STAT/deploy/push-stats-nexus.sh"
+  ],
+  "doc_sync_v3": true,
+  "doc_sync_v3_live": true
 }
