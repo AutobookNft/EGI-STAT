@@ -59,11 +59,15 @@ aws s3 cp "$ROOT/backend/data/stats.db" "s3://${BUCKET}/stats.db" --region "$REG
 [ -f "$DOCS_SERVING/doc-coverage.json" ] && aws s3 cp "$DOCS_SERVING/doc-coverage.json" "s3://${BUCKET}/doc-coverage.json" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
   || echo "[push-nexus] doc-coverage s3 cp WARN" >&2
 
+# 2f) pubblica REPO_MAP.json su S3 (M-OS3-141 P5: serve all'asse Repo del monitor doc, best-effort)
+[ -f "$OS3M/docs/missions/REPO_MAP.json" ] && aws s3 cp "$OS3M/docs/missions/REPO_MAP.json" "s3://${BUCKET}/REPO_MAP.json" --region "$REGION" --profile "$PROFILE" >/dev/null 2>&1 \
+  || echo "[push-nexus] REPO_MAP.json s3 cp WARN" >&2
+
 # 3) consegna al dev-server (EVENT-DRIVEN, no cron): l'EC2 tira giu via SSM (il suo ruolo ha GetObject)
 aws ssm send-command --profile "$PROFILE" --region "$REGION" --instance-ids "$INSTANCE" \
   --document-name "AWS-RunShellScript" \
   --comment "nexus stats push (mission close)" \
-  --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\",\"aws s3 cp s3://${BUCKET}/coverage.json ${DEST}/backend/data/coverage.json --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/drift.json ${DEST}/backend/data/drift.json --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/docs.serving.db ${DEST}/backend/data/docs.serving.db --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/doc-coverage.json ${DEST}/backend/data/doc-coverage.json --region ${REGION} || true\"]" \
+  --parameters commands="[\"aws s3 cp s3://${BUCKET}/stats.db ${DEST}/backend/data/stats.db --region ${REGION}\",\"aws s3 cp s3://${BUCKET}/coverage.json ${DEST}/backend/data/coverage.json --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/drift.json ${DEST}/backend/data/drift.json --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/docs.serving.db ${DEST}/backend/data/docs.serving.db --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/doc-coverage.json ${DEST}/backend/data/doc-coverage.json --region ${REGION} || true\",\"aws s3 cp s3://${BUCKET}/REPO_MAP.json ${DEST}/backend/data/REPO_MAP.json --region ${REGION} || true\"]" \
   --query 'Command.CommandId' --output text 2>/dev/null \
   || echo "[push-nexus] ssm send-command FALLITO (verifica perms ssm:SendCommand su $INSTANCE per $PROFILE)" >&2
 # 4) ATTUATORE vault Obsidian (M-OS3-109): auto-sync del "secondo cervello" a ogni ciclo mission.
