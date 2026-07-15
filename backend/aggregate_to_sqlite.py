@@ -23,6 +23,7 @@ import json
 import sqlite3
 import argparse
 import subprocess
+import importlib.util
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -163,12 +164,47 @@ SCHEMA = [
     )""",
     "CREATE INDEX idx_missions_open_organ  ON missions_open(organ)",
     "CREATE INDEX idx_missions_open_status ON missions_open(raw_status)",
+
+    # 8) value_daily / value_weekly — produzione a VALORE (M-NXC-001). Gemelli
+    #    a-valore delle metriche di ATTIVITÀ (mission_repo_day → daily/weekly):
+    #    CREATE pesato + SYNC (sotto-prodotto separato) − ERRORI = net_score per
+    #    periodo ISO. Fonte = registro-capacità docs/lso/SSOT_REGISTRY.json
+    #    (+ sibling CONCLUSION_EVENTS.jsonl per i sync, + git [FIX][grano] per gli
+    #    errori). La LOGICA (pesi libreria-lso 3 / oracode 2 / app 1, §4/§5/§7 del
+    #    modello Hubbard ratificato) è quella di os3-matrix bin/production_index.py,
+    #    RIUSATA (non riscritta): qui solo discovery + persistenza. Così l'app legge
+    #    il valore dal SQLite locale come ogni altra stat (SSOT §Principio cardine:
+    #    mai un secondo binario di lettura nell'app). per_livello/sync_per_livello =
+    #    JSON {ruolo: count}. period = PK (idempotenza per full-rebuild).
+    """CREATE TABLE value_daily (
+        period           TEXT PRIMARY KEY,           -- 'YYYY-MM-DD'
+        n_create         INTEGER NOT NULL DEFAULT 0,
+        create_score     INTEGER NOT NULL DEFAULT 0, -- somma pesi dei create (§5)
+        n_sync           INTEGER NOT NULL DEFAULT 0,
+        n_errori         INTEGER NOT NULL DEFAULT 0,
+        error_penalty    INTEGER NOT NULL DEFAULT 0, -- somma pesi sottratti (§4)
+        net_score        INTEGER NOT NULL DEFAULT 0, -- create_score − error_penalty
+        per_livello      TEXT NOT NULL DEFAULT '{}', -- JSON {ruolo: count} create
+        sync_per_livello TEXT NOT NULL DEFAULT '{}'  -- JSON {ruolo: count} sync
+    )""",
+    """CREATE TABLE value_weekly (
+        period           TEXT PRIMARY KEY,           -- 'YYYY-Www' (settimana ISO)
+        n_create         INTEGER NOT NULL DEFAULT 0,
+        create_score     INTEGER NOT NULL DEFAULT 0,
+        n_sync           INTEGER NOT NULL DEFAULT 0,
+        n_errori         INTEGER NOT NULL DEFAULT 0,
+        error_penalty    INTEGER NOT NULL DEFAULT 0,
+        net_score        INTEGER NOT NULL DEFAULT 0,
+        per_livello      TEXT NOT NULL DEFAULT '{}',
+        sync_per_livello TEXT NOT NULL DEFAULT '{}'
+    )""",
 ]
 
 DROP_TABLES = [
     "time_entries",
     "mission_commits", "mission_repo_day", "mission_tags", "mission_organs", "meta", "missions",
     "missions_open",  # M-FUC-054: full-rebuild ricostruisce anche la tabella additiva
+    "value_daily", "value_weekly",  # M-NXC-001: produzione a valore, full-rebuild
 ]
 
 
@@ -379,6 +415,134 @@ def insert_open_mission(conn, organ, registry_path, raw_mission):
             datetime.now(timezone.utc).isoformat(),
         ),
     )
+
+
+# ── Produzione a VALORE (M-NXC-001): value_daily / value_weekly ───────────────
+# DRY: la LOGICA del valore-indice (CREATE pesato + SYNC separato − ERRORI,
+# §4/§5/§7 del modello Hubbard ratificato dal CEO) NON è riscritta qui — è quella
+# di os3-matrix bin/production_index.py, caricata come modulo e riusata sulle sue
+# funzioni pure. Qui si fa SOLO discovery (lo STESSO meccanismo delle
+# mission-registry) + persistenza in SQLite: l'app legge il valore dal serving
+# locale come ogni altra stat (SSOT §Principio cardine: mai un secondo binario di
+# lettura nell'app; la lettura live del registro dall'app è ABOLITA — M-NXC-001).
+VALUE_GRANULARITIES = ("weekly", "daily")
+
+
+def discover_capability_registries():
+    """[(repo_root, ssot_registry_path)] — un registro-capacità per repo scoperto.
+
+    RIUSA discover_registries_from_index() (le mission-registry via projects.json,
+    NO walk, NO hardcoded, skip-firmato D2 onorato): da ogni MISSION_REGISTRY
+    deriva la root del repo (ecosystem._project_root = parent di docs/) e cerca il
+    sibling docs/lso/SSOT_REGISTRY.json. Stesso repo, cartella docs/lso/ —
+    verificato sul box: os3-matrix/docs/missions/MISSION_REGISTRY.json ↔
+    os3-matrix/docs/lso/SSOT_REGISTRY.json. Dedup per realpath, ordine stabile.
+    Repo senza registro-capacità saltati (degrado pulito: oggi solo os3-matrix
+    ne ha uno; portabilità = il meccanismo generalizza a ogni repo che lo aggiunga).
+    """
+    seen = set()
+    out = []
+    for mission_registry_path, _organ in discover_registries_from_index():
+        repo_root = ecosystem._project_root(mission_registry_path)
+        ssot = os.path.join(repo_root, "docs", "lso", "SSOT_REGISTRY.json")
+        rp = os.path.realpath(ssot)
+        if rp in seen or not os.path.isfile(rp):
+            continue
+        seen.add(rp)
+        out.append((repo_root, rp))
+    out.sort(key=lambda t: t[1])
+    return out
+
+
+def _load_production_index():
+    """Carica la logica ratificata del valore-indice (os3-matrix
+    bin/production_index.py) per RIUSO DRY. Path risolto da ENV
+    ORACODE_PRODUCTION_INDEX_BIN oppure — senza hardcodare /home (P0-12) — cercando
+    bin/production_index.py nelle root dei repo con registro-capacità (stessa
+    discovery). Il modulo è puro-stdlib → import standalone via importlib. Ritorna
+    il modulo, o None se non trovato/illeggibile (→ tabelle value_* vuote)."""
+    candidates = []
+    env = os.getenv("ORACODE_PRODUCTION_INDEX_BIN")
+    if env:
+        candidates.append(env)
+    for repo_root, _ssot in discover_capability_registries():
+        candidates.append(os.path.join(repo_root, "bin", "production_index.py"))
+    for path in candidates:
+        if not os.path.isfile(path):
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location("production_index", path)
+            if spec is None or spec.loader is None:
+                continue
+            mod = importlib.util.module_from_spec(spec)
+            # REGISTRAZIONE OBBLIGATORIA prima di exec_module: le @dataclass del tool
+            # risolvono cls.__module__ via sys.modules[spec.name] (dataclasses.py
+            # _is_type). Senza, exec_module fallisce con AttributeError su NoneType.
+            sys.modules[spec.name] = mod
+            spec.loader.exec_module(mod)
+            return mod
+        except Exception as exc:  # modulo illeggibile → prova il prossimo candidato
+            sys.modules.pop("production_index", None)
+            print(f"  WARN: production_index non caricabile da {path}: {exc}", file=sys.stderr)
+    return None
+
+
+def _compute_value_rows(pi, granularity):
+    """Righe-periodo (WeekRow di production_index) per la granularità data,
+    RIUSANDO le funzioni pure del tool su OGNI registro-capacità scoperto.
+
+    Gli eventi (create dal registro, sync dal log sibling, errori dal git
+    [FIX][grano]) di TUTTI i repo si UNISCONO prima dell'aggregazione, così i
+    totali per-periodo e la pendenza (delta) sono calcolati sulla serie unificata
+    e ordinata. period_key sceglie la maglia temporale (giorno|settimana ISO) —
+    unica differenza tra i due gemelli (DRY, design §7). Ogni repo usa il PROPRIO
+    .oracode/project.json (ruolo di default) e il PROPRIO git (errori)."""
+    period_key = pi.iso_day_of if granularity == "daily" else pi.iso_week_of
+    create_events, sync_events, error_events = [], [], []
+    for repo_root, ssot_path in discover_capability_registries():
+        registry_path = Path(ssot_path)
+        project_json = Path(repo_root) / ".oracode" / "project.json"
+        resolution = pi.resolve_default_ruolo(project_json if project_json.exists() else None)
+        entries = pi.load_registry_entries(registry_path)
+        create_events.extend(pi.iter_create_events(entries, resolution, period_key))
+        sync_log = pi.load_conclusion_events(pi.conclusion_events_path(registry_path))
+        sync_events.extend(pi.iter_sync_events(sync_log, resolution, period_key))
+        concluded = list(pi.iter_concluded_capabilities(entries, resolution))
+        error_events.extend(
+            pi.compute_error_events(concluded, pi.iter_fix_commits(Path(repo_root), period_key))
+        )
+    return pi.aggregate(create_events, sync_events, error_events)
+
+
+def populate_value_tables(conn):
+    """Popola value_daily + value_weekly dal valore-indice ratificato (riuso di
+    production_index). Fonte non disponibile (tool non caricabile o nessun
+    registro-capacità scoperto) → tabelle VUOTE (degrado pulito, come le altre
+    tabelle su fonte assente). Ritorna (n_daily, n_weekly)."""
+    pi = _load_production_index()
+    if pi is None:
+        print("  WARN: production_index non disponibile → value_daily/value_weekly vuote",
+              file=sys.stderr)
+        return (0, 0)
+    counts = {"value_daily": 0, "value_weekly": 0}
+    for granularity, table in (("daily", "value_daily"), ("weekly", "value_weekly")):
+        rows = _compute_value_rows(pi, granularity)
+        for r in rows:
+            conn.execute(
+                f"""INSERT OR REPLACE INTO {table} (
+                    period, n_create, create_score, n_sync, n_errori,
+                    error_penalty, net_score, per_livello, sync_per_livello
+                ) VALUES (?,?,?,?,?,?,?,?,?)""",
+                (
+                    r.iso_week,  # chiave-periodo (day o week) scelta da period_key
+                    _int(r.n_create), _int(r.create_score), _int(r.n_sync),
+                    _int(r.n_errori), _int(r.error_penalty), _int(r.net_score),
+                    json.dumps(dict(r.per_livello), ensure_ascii=False),
+                    json.dumps(dict(r.sync_per_livello), ensure_ascii=False),
+                ),
+            )
+        counts[table] = len(rows)
+    return (counts["value_daily"], counts["value_weekly"])
 
 
 # ── Pass2: clustering anti-collisione (H1, M-248) ─────────────────────────────
@@ -632,6 +796,15 @@ def source_files():
     for registry_path, _organ in discover_registries_from_index():
         if os.path.isfile(registry_path):
             srcs.append(registry_path)
+    # M-NXC-001: il valore-indice dipende dai registri-capacità e dai log di
+    # conclusione (sync). Inclusi qui così value_daily/value_weekly si rigenerano
+    # (ensure_fresh) quando cambiano, come il resto del serving.
+    for repo_root, ssot_path in discover_capability_registries():
+        if os.path.isfile(ssot_path):
+            srcs.append(ssot_path)
+        conclusion_log = os.path.join(repo_root, "docs", "lso", "CONCLUSION_EVENTS.jsonl")
+        if os.path.isfile(conclusion_log):
+            srcs.append(conclusion_log)
     return srcs
 
 
@@ -749,9 +922,18 @@ def aggregate(db_path, verbose=False):
                 if conn.total_changes > before:
                     n_open += 1
 
+        # Produzione a VALORE (M-NXC-001): value_daily + value_weekly dal
+        # registro-capacità, riusando la logica ratificata di production_index.
+        # Path SEPARATO dai conteggi mission (asse a-valore, non a-attività).
+        n_value_daily, n_value_weekly = populate_value_tables(conn)
+
         write_meta(conn, len(registries), n_missions, organs, per_organ)
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
                      ("missions_open_count", str(n_open)))
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
+                     ("value_daily_count", str(n_value_daily)))
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
+                     ("value_weekly_count", str(n_value_weekly)))
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
                      ("time_entries_manual", str(n_manual)))
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
