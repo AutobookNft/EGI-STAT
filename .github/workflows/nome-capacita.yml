@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Il muro sul server — os3-matrix M-OS3-184, capacità «commit-di-capacita-senza-slug-rifiutato»
+#
+# Verifica che OGNI commit spinto porti il nome della capacità a cui appartiene il lavoro.
+#
+# PERCHÉ QUI E NON SOLO SUL COMPUTER (misurato il 2026-07-31): il cancello installato nei 27
+# repository funziona — provato sui messaggi veri, li rifiuta — ma sei commit sono passati lo
+# stesso, perché `git commit --no-verify` salta tutti i ganci locali. È git stesso a offrire la
+# scorciatoia, e nessun controllo che vive nel computer può toglierla. Qui la scorciatoia non c'è:
+# chi spinge non decide quali controlli girano.
+#
+# NON MODIFICARE A MANO: questo file è installato da os3-matrix/bin/deploy-git-hooks --github.
+# La fonte è os3-matrix/git-hooks/workflow-nome-capacita.yml.
+# ─────────────────────────────────────────────────────────────────────────────
+name: nome della capacità nei commit
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verifica:
+    name: ogni commit dice a quale capacità appartiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # serve la storia: si giudicano i commit, non i file
+
+      - name: verifica i nomi
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            DA="${{ github.event.pull_request.base.sha }}"
+            A="${{ github.event.pull_request.head.sha }}"
+          else
+            DA="${{ github.event.before }}"
+            A="${{ github.sha }}"
+          fi
+          # Ramo nuovo o storia riscritta: 'prima' non esiste. Si giudica solo l'ultimo commit,
+          # invece di dichiarare colpevole (o innocente) tutta la storia del repository.
+          if [ -z "$DA" ] || [ "$DA" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$DA^{commit}" 2>/dev/null; then
+            DA="$A~1"
+            git cat-file -e "$DA^{commit}" 2>/dev/null || { echo "primo commit del repository: niente da verificare"; exit 0; }
+          fi
+          bash .github/oracode/verifica-nomi-commit.sh "$DA" "$A"

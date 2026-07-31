@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "package": "os3-matrix/contracts",
+    "author": "Padmin D. Curtis (AI Partner OS3.0) for Fabio Cherici",
+    "version": "1.0.0 (M-OS3-165)",
+    "date": "2026-07-21",
+    "purpose": "Contratto L7 — UNICA definizione del riconoscimento del tag-di-classe e del marcatore [grano:<slug>] di un commit. Prima di M-OS3-165 la regola viveva in DUE punti divergenti (bin/production_index.py hardcoded, senza cifre nel tag e con grano permissivo; hooks/capability-commit-gate.sh con cifre, alias, esclusione M-* e grano kebab-strict). La capacita grano-recognition-unica azzera la divergenza: questo JSON e la fonte-dato, letta dal CONTATORE (bin/production_index.py), dal GATE (hooks/capability-commit-gate.sh via hooks/lib/grano-recognition.sh) e dal test di parita (tests/M-OS3-165). Il modello canonico e quello del gate, che era il piu completo e corretto.",
+    "decisione": "CEO/coordinatore M-OS3-165: una sola definizione identica per contatore, gate e close. Modello = gate (tag con cifre cosi [I18N] e riconosciuto; grano kebab-strict cosi [grano:MAIUSC] e respinto). REGEX vincolate al sottoinsieme identico in Python re e ERE bash: classi [A-Z0-9_-]/[a-z0-9-] e ancore ^,\\[,\\]. Alias ed esclusione-prefisso sono DATI qui (logica applicata da entrambi i lati leggendo il JSON), non regex."
+  },
+  "tag_pattern": "^\\[([A-Z0-9_-]+)\\]",
+  "tag_aliases": {
+    "DOCS": "DOC",
+    "FEATURE": "FEAT",
+    "HOTFIX": "FIX",
+    "RAFACTOR": "REFACTOR"
+  },
+  "tag_exclude_prefix": "M-",
+  "grano_pattern": "\\[grano:([a-z0-9-]+)\\]"
+}
