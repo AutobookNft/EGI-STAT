@@ -181,9 +181,10 @@ SCHEMA = [
         n_create         INTEGER NOT NULL DEFAULT 0,
         create_score     INTEGER NOT NULL DEFAULT 0, -- somma pesi dei create (§5)
         n_sync           INTEGER NOT NULL DEFAULT 0,
-        n_errori         INTEGER NOT NULL DEFAULT 0,
-        error_penalty    INTEGER NOT NULL DEFAULT 0, -- somma pesi sottratti (§4)
-        net_score        INTEGER NOT NULL DEFAULT 0, -- create_score − error_penalty
+        n_fix            INTEGER NOT NULL DEFAULT 0, -- riparazioni: serie PROPRIA, non sottrae
+        net_score        INTEGER NOT NULL DEFAULT 0, -- == create_score (M-OS3-184, CEO 31/07)
+        parziale         INTEGER NOT NULL DEFAULT 0, -- 1 = periodo ANCORA IN CORSO
+        giorni_trascorsi INTEGER,                    -- quanti giorni del periodo sono passati
         per_livello      TEXT NOT NULL DEFAULT '{}', -- JSON {ruolo: count} create
         sync_per_livello TEXT NOT NULL DEFAULT '{}'  -- JSON {ruolo: count} sync
     )""",
@@ -192,11 +193,29 @@ SCHEMA = [
         n_create         INTEGER NOT NULL DEFAULT 0,
         create_score     INTEGER NOT NULL DEFAULT 0,
         n_sync           INTEGER NOT NULL DEFAULT 0,
-        n_errori         INTEGER NOT NULL DEFAULT 0,
-        error_penalty    INTEGER NOT NULL DEFAULT 0,
+        n_fix            INTEGER NOT NULL DEFAULT 0,
         net_score        INTEGER NOT NULL DEFAULT 0,
+        parziale         INTEGER NOT NULL DEFAULT 0,
+        giorni_trascorsi INTEGER,
         per_livello      TEXT NOT NULL DEFAULT '{}',
         sync_per_livello TEXT NOT NULL DEFAULT '{}'
+    )""",
+    # 9) razione_weekly — il CONSUMO di token (M-OS3-188). Tabella SEPARATA, MAI sommata a
+    #    value_weekly, esattamente come l'asse ORE di M-234: un dato di runtime che non nasce
+    #    da un commit. La ragione e in PL 29 (Hubbard): una statistica misura «lavoro svolto»,
+    #    e i token sono MATERIA PRIMA. Il numero che va sul pannello non e il consumo grezzo —
+    #    e il TETTO che ne deriva (capienza / resa), in capacita e nel verso normale.
+    #    FONTE: il registro CONGELATO os3-matrix/docs/stats/RAZIONE_SETTIMANALE.json, non le
+    #    trascrizioni: quelle sono locali e volatili, il registro e versionato in git.
+    """CREATE TABLE razione_weekly (
+        period           TEXT PRIMARY KEY,           -- 'YYYY-Www' (settimana ISO)
+        token            INTEGER NOT NULL DEFAULT 0, -- razione GENERALE consumata
+        riletti          INTEGER NOT NULL DEFAULT 0, -- quanta parte e contesto gia caricato
+        token_fable      INTEGER NOT NULL DEFAULT 0, -- serbatoio SEPARATO, mai sommato
+        chiamate         INTEGER NOT NULL DEFAULT 0,
+        congelato_il     TEXT,                       -- NULL = settimana ancora aperta
+        capienza         INTEGER NOT NULL DEFAULT 0, -- con cui e stato calcolato il tetto
+        capienza_fissata TEXT                        -- data: se cambia, la serie si spezza (PL 29)
     )""",
 ]
 
@@ -205,6 +224,7 @@ DROP_TABLES = [
     "mission_commits", "mission_repo_day", "mission_tags", "mission_organs", "meta", "missions",
     "missions_open",  # M-FUC-054: full-rebuild ricostruisce anche la tabella additiva
     "value_daily", "value_weekly",  # M-NXC-001: produzione a valore, full-rebuild
+    "razione_weekly",  # M-OS3-188: consumo token, full-rebuild dal registro congelato
 ]
 
 
@@ -498,7 +518,7 @@ def _compute_value_rows(pi, granularity):
     unica differenza tra i due gemelli (DRY, design §7). Ogni repo usa il PROPRIO
     .oracode/project.json (ruolo di default) e il PROPRIO git (errori)."""
     period_key = pi.iso_day_of if granularity == "daily" else pi.iso_week_of
-    create_events, sync_events, error_events = [], [], []
+    create_events, sync_events, fix_commits = [], [], []
     for repo_root, ssot_path in discover_capability_registries():
         registry_path = Path(ssot_path)
         project_json = Path(repo_root) / ".oracode" / "project.json"
@@ -507,11 +527,101 @@ def _compute_value_rows(pi, granularity):
         create_events.extend(pi.iter_create_events(entries, resolution, period_key))
         sync_log = pi.load_conclusion_events(pi.conclusion_events_path(registry_path))
         sync_events.extend(pi.iter_sync_events(sync_log, resolution, period_key))
-        concluded = list(pi.iter_concluded_capabilities(entries, resolution))
-        error_events.extend(
-            pi.compute_error_events(concluded, pi.iter_fix_commits(Path(repo_root), period_key))
+
+    # M-OS3-184 — TRE SERIE SEPARATE, nessuna sottrae a un'altra (decisione CEO 2026-07-31).
+    # Le riparazioni si contano TUTTE, col nome della capacita o senza («un fix e un fix, punto»),
+    # e su TUTTI i repository dell'indice: il fondo scala della serie e calcolato sui 27, e
+    # contando i punti su un perimetro piu stretto fondo e punti uscirebbero da due metri diversi.
+    #
+    # E le CAPACITA si contano dal LAVORO PROVATO DAI COMMIT, non dal timbro di chiusura: misura
+    # del 31/07, nella settimana in corso c'erano 48 capacita con lavoro committato e il pannello
+    # ne mostrava 12, perche 30 non avevano nessun timbro — il timbro lo mette la catena di
+    # chiusura, e se non arriva in fondo il lavoro resta invisibile per sempre.
+    # UNIONE delle due prove, non sostituzione: il nome nei commit esiste solo da meta luglio,
+    # quindi il solo git azzererebbe tutto lo storico precedente. Vince la prova piu antica.
+    tutti_commits = []
+    for _desc, desc_path in ecosystem._descriptors_from_projects_json():
+        repo = Path(desc_path).resolve().parent.parent
+        if not (repo / ".git").is_dir():
+            continue
+        fix_commits.extend(pi.iter_fix_commits(repo, period_key))
+        out = subprocess.run(["git", "-C", str(repo), "log", "--all",
+                              "--pretty=format:%ad\t%s", "--date=short"],
+                             capture_output=True, text=True, timeout=120).stdout
+        for line in out.splitlines():
+            if "\t" in line:
+                d, subj = line.split("\t", 1)
+                tutti_commits.append((d.strip(), subj))
+    if tutti_commits:
+        g_create, g_sync = pi.capacita_dai_commit(tutti_commits, period_key=period_key)
+        per_slug = {ev.slug: ev for ev in create_events}
+        for ev in g_create:
+            vecchio = per_slug.get(ev.slug)
+            if vecchio is None or ev.iso_week < vecchio.iso_week:
+                per_slug[ev.slug] = ev
+        create_events = sorted(per_slug.values(), key=lambda e: (e.iso_week, e.slug))
+        visti = {(e.slug, e.iso_week) for e in sync_events}
+        for ev in g_sync:
+            if (ev.slug, ev.iso_week) not in visti:
+                visti.add((ev.slug, ev.iso_week))
+                sync_events.append(ev)
+    return pi.aggregate(create_events, sync_events, fix_commits)
+
+
+def populate_razione_table(conn):
+    """Popola razione_weekly dal registro CONGELATO di os3-matrix (M-OS3-188).
+
+    NON legge le trascrizioni: quelle sono locali alla macchina del CEO, volatili e non
+    versionate. La fonte e `docs/stats/RAZIONE_SETTIMANALE.json`, che viaggia in git col repo.
+    Chi lo scrive e `os3-matrix/bin/oracode-razione`, ed e l unico che tocca le trascrizioni.
+
+    Fonte assente -> tabella VUOTA (degrado pulito, come le altre su fonte assente): un pannello
+    che non ha il dato deve dirlo, non inventare uno zero. Ritorna il numero di righe.
+    """
+    pi = _load_production_index()
+    if pi is None:
+        print("  WARN: production_index non disponibile -> razione_weekly vuota", file=sys.stderr)
+        return 0
+    if not hasattr(pi, "registro_razione_path"):
+        print("  WARN: production_index senza asse razione (versione vecchia) -> razione_weekly vuota",
+              file=sys.stderr)
+        return 0
+
+    radice = Path(pi.__file__).resolve().parent.parent
+    registro_path = pi.registro_razione_path(radice)
+    if not registro_path.exists():
+        print(f"  WARN: registro razione assente ({registro_path}) -> razione_weekly vuota",
+              file=sys.stderr)
+        return 0
+
+    testo = registro_path.read_text(encoding="utf-8")
+    registro = pi.registro_razione_da_json(testo)
+    capienza = int(pi.CAPIENZA_RAZIONE["token_settimana"])
+    fissata = str(pi.CAPIENZA_RAZIONE["fissata_il"])
+
+    # La settimana ancora aperta sta in un blocco separato del registro, riscritto a ogni giro.
+    # Entra in tabella con `congelato_il` NULL: il pannello deve poterla disegnare, e insieme
+    # deve poter dire che non e ancora storia.
+    aperta = pi.registro_razione_in_corso(testo)
+    if aperta.get("iso_week") and aperta["iso_week"] not in registro:
+        registro = dict(registro)
+        registro[str(aperta["iso_week"])] = {**aperta, "congelato_il": None}
+
+    for periodo in sorted(registro):
+        r = registro[periodo]
+        conn.execute(
+            """INSERT OR REPLACE INTO razione_weekly (
+                period, token, riletti, token_fable, chiamate,
+                congelato_il, capienza, capienza_fissata
+            ) VALUES (?,?,?,?,?,?,?,?)""",
+            (
+                periodo,
+                _int(r.get("totale")), _int(r.get("riletti")), _int(r.get("totale_fable")),
+                _int(r.get("chiamate")), r.get("congelato_il"),
+                capienza, fissata,
+            ),
         )
-    return pi.aggregate(create_events, sync_events, error_events)
+    return len(registro)
 
 
 def populate_value_tables(conn):
@@ -530,15 +640,19 @@ def populate_value_tables(conn):
         for r in rows:
             conn.execute(
                 f"""INSERT OR REPLACE INTO {table} (
-                    period, n_create, create_score, n_sync, n_errori,
-                    error_penalty, net_score, per_livello, sync_per_livello
-                ) VALUES (?,?,?,?,?,?,?,?,?)""",
+                    period, n_create, create_score, n_sync, n_fix,
+                    net_score, per_livello, sync_per_livello, parziale, giorni_trascorsi
+                ) VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (
                     r.iso_week,  # chiave-periodo (day o week) scelta da period_key
                     _int(r.n_create), _int(r.create_score), _int(r.n_sync),
-                    _int(r.n_errori), _int(r.error_penalty), _int(r.net_score),
+                    _int(r.n_fix), _int(r.net_score),
                     json.dumps(dict(r.per_livello), ensure_ascii=False),
                     json.dumps(dict(r.sync_per_livello), ensure_ascii=False),
+                    # Il periodo in corso arriva al pannello marcato, cosi l'ultimo punto non si
+                    # legge come un crollo quando e solo meta settimana.
+                    1 if pi.periodo_parziale(r.iso_week).get("parziale") else 0,
+                    pi.periodo_parziale(r.iso_week).get("giorni_trascorsi"),
                 ),
             )
         counts[table] = len(rows)
@@ -926,6 +1040,10 @@ def aggregate(db_path, verbose=False):
         # registro-capacità, riusando la logica ratificata di production_index.
         # Path SEPARATO dai conteggi mission (asse a-valore, non a-attività).
         n_value_daily, n_value_weekly = populate_value_tables(conn)
+
+        # M-OS3-188 — il CONSUMO di token, asse separato. Path a se come l'asse ORE:
+        # non tocca nessuna tabella di produzione e non viene mai sommato ad esse.
+        n_razione = populate_razione_table(conn)
 
         write_meta(conn, len(registries), n_missions, organs, per_organ)
         conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)",
