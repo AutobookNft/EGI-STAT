@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "description": "Creato da M-OS3-202: dichiarazione senza file dal giorno della nascita; secchi da riempire con l'uso. proponitore eseguito: 'il registro di lettura non contiene mission di questo registro'. Chiavi = fallback del motore (bin/mission BOOTSTRAP_FALLBACK_TYPES); un secchio vuoto e' onesto, una chiave mancante e' degrado.",
+    "version": "1.0.0",
+    "created": "2026-08-26",
+    "author": "Padmin D. Curtis (AI Partner OS3.0) for Fabio Cherici (CEO)",
+    "provenance": "M-OS3-202, capacita organo-non-dichiara-indice-che-non-ha (scaffold)",
+    "note": "Path relativi a instance_root (bin/mission emitBootstrap r.803-804). Aggiornamento via ratifica CEO; proposte dal retrospective in BOOTSTRAP_DRIFT_LOG.md o da oracode-bootstrap-proponi."
+  },
+  "always_loaded": [],
+  "by_mission_type": {
+    "arch": [],
+    "doc": [],
+    "doc-sync": [],
+    "feature": [],
+    "fix": [],
+    "guard": [],
+    "refactor": []
+  },
+  "by_organ": {}
+}
