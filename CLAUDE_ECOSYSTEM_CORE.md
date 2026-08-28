@@ -26,6 +26,14 @@
   NATAN_LOC         → RAG atti PA + AI per Comuni. natan-loc.florenceegi.com | /home/fabio/NATAN_LOC/
   EGI-Credential    → Wallet competenze certificate (Algorand). egi-credential.florenceegi.com | IN PRODUZIONE (parziale)
   La Bottega        → Strumenti artista-brand + valutazione collezionisti. DB bottega.* | la-bottega.florenceegi.com | M-050
+                      ⛔ NON HA UNA PORTA DI REGISTRAZIONE. E' un modulo di art: chi usa La Bottega
+                      E' UN CREATOR di art. La regola «chi si iscrive da un organo diverso da art e'
+                      collector, o company se e' un ente» NON la riguarda: da qui non ci si iscrive.
+                      Dal 2026-08-04 (M-EGI-416) La Bottega non crea piu nessun utente: la rotta
+                      register e' stata tolta perche' era pubblica, non autenticata e non la
+                      chiamava nessuno. Le resta il solo accesso.
+                      (CEO, ripetuto ~10 volte — ultima 2026-08-04. Chi lo riscrive sbagliato ricade
+                      nell'errore che il CEO ha corretto piu' volte.)
   CREATOR-STAGING   → Configuratore sito creator + template madre (Next 15). creator-staging.florenceegi.com | M-051
 ━━━ STRUMENTI INTERNI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   EGI-STAT          → Dashboard produttività dev. /home/fabio/EGI-STAT/

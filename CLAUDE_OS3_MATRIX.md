@@ -17,7 +17,7 @@ provenance Ultra, compliance MiCA/GDPR. Hook globali in `~/.claude/hooks/`, agen
 ## Hook presenti (per funzione — campione rilevante FlorenceEGI)
 - **Mission engine**: `mission-state-guard` (blocca Write senza mission focalizzata), `mission-read-tracker`, `mission-report-guard`, `mission-stats-guard`, `mission-timeout-checker`, `os3-mission-reinject`, `state-file-write-guard`, `spawn-fingerprint-logger`.
 - **Audit/Gate**: `os3-preflight-guard`, `os3-audit-on-complete`, `os3-audit-static`, `os3-deep-audit`, `oracode-lint-gate`, `oracode-lint-guard`, `test-quality-gate`, `coverage-check-precheck`.
-- **DOC-SYNC / SSOT**: `doc-sync-v2-guard`, `ssot-living-check`, `ssot-reflex-guard`, `trigger-matrix-classifier`.
+- **DOC-SYNC / SSOT**: `docsync-close-evidence-guard`, `ssot-living-check`, `ssot-reflex-guard`, `trigger-matrix-classifier`.
 - **Provenance Ultra (P0-2/P0-4/P0-5)**: `uem-provenance-guard`, `uem-code-validation-guard`, `ulm-provenance-guard`, `utm-key-atomicity-guard`, `p04-method-guard`.
 - **Sicurezza/segreti**: `env-guard`, `gitleaks-precommit`, `install-gitleaks-hooks`, `db-prod-guard` (M-OS3-087: blocca distruttivo verso DB prod), `hardcoded-strings-guard`, `immutable-values-guard`.
 - **Compliance dominio**: `mica-guard`, `seo-public-content-guard`, `web-quality-gate-guard`.
@@ -30,15 +30,15 @@ provenance Ultra, compliance MiCA/GDPR. Hook globali in `~/.claude/hooks/`, agen
 
 ## Mission Registry Enforcement
 Engine `bin/mission`: FASE 0 (prenota ID) → executing (test-file gate) → auditing (os3-audit-specialist) →
-closed/closed_with_debt (report-pair + doc-sync-v2). Registry: `EGI-DOC/docs/missions/MISSION_REGISTRY.json`.
+closed/closed_with_debt (report-pair + doc-sync-v3). Registry: `EGI-DOC/docs/missions/MISSION_REGISTRY.json`.
 Edit fuori mission focalizzata → bloccati da `mission-state-guard`.
 
 ## DOC-SYNC v2 Runtime
-Agente `doc-sync-v2` a chiusura mission: analisi diff → SSOT impattati (registry watches + RAG) →
+Agente `doc-sync-v3` a chiusura mission: analisi diff → SSOT impattati (registry watches + RAG) →
 patch additivo/sostitutivo → re-index RAG → audit trail. L'operatore NON aggiorna i SSOT a mano durante la mission.
 
 ## Agenti Specializzati (~/.claude/agents/)
-- **Oracode/LSO**: `oracode-specialist`, `oracode-alignment-interpreter`, `organ-gap-scout`, `os3-audit-specialist`, `os3-gate`, `ssot-living-agent`, `doc-sync-v2`, `skill-dryrun-guardian`.
+- **Oracode/LSO**: `oracode-specialist`, `oracode-alignment-interpreter`, `organ-gap-scout`, `os3-audit-specialist`, `os3-gate`, `ssot-living-agent`, `doc-sync-v3`, `skill-dryrun-guardian`.
 - **Dominio FlorenceEGI**: `egili-blood-keeper` (sangue Egili), `m093-remediation-tracker`, `corporate-finance-specialist`.
 - **Coder specialist**: `node-ts-specialist` (+ laravel/python/frontend specialist a livello organo).
 - **Ingegneri-design**: `engineer-architecture`, `engineer-product`, `engineer-recsys`, `engineer-social-graph`, `engineer-trust-safety`, `engineer-evaluator`, `engineer-meta`.

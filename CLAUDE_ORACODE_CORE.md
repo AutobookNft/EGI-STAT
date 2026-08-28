@@ -221,7 +221,8 @@ Vincoli invarianti: **triage** (solo domini applicabili, mai "tutti a forza"); *
 "controlli superati in data certa", non "sicuro al 100%"); **deterministico dove blocca** (gate su regola
 scritta, mai su opinione di un modello — il passaggio AI è esplorativo); **onestà epistemica** (REGOLA ZERO).
 
-Dettaglio architetturale, piano mission (E1–E6) e dottrina: charter `EGI-DOC/docs/oracode/Egida/00_EGIDA_CHARTER.md`.
+Dettaglio (strumenti, proporzionalità, vincoli): modulo on-demand `oracode/docs/paradigm/modules/EGIDA_ASSE_DIFESA.md`.
+Il charter di fondazione (genesi, piano E1–E6) è esperienza della prima istanza e vive nel suo repo-centro, fuori dal prodotto.
 
 ---
 
@@ -483,5 +484,5 @@ Quando un report torna con flag → VERIFICA alla fonte prima di agire.
 ---
 
 *Oracode System — paradigma di sviluppo software AI-native.*
-*Versione template: 2.2.0 — Data: 2026-07-15 (M-OS3-150: Trigger Matrix per NOME — categorie-parola primarie, numeri alias legacy, canone M-FUC-040. Storia: v2.1.0 = M-OS3-144 ripristino integrale pre-dieta + glossario 6 ruoli, commit oracode 646a00b..2b7a7b2)*
+*Versione template: 2.2.1 — Data: 2026-08-27 (M-NEXUS-018: il rimando Egida punta al modulo generico del paradigma, non al charter d'istanza — decisione CEO 2026-07-11 confermata 2026-08-27. Storia: v2.2.0 = 2026-07-15 M-OS3-150: Trigger Matrix per NOME — categorie-parola primarie, numeri alias legacy, canone M-FUC-040. Storia: v2.1.0 = M-OS3-144 ripristino integrale pre-dieta + glossario 6 ruoli, commit oracode 646a00b..2b7a7b2)*
 *Licenza: MIT*
